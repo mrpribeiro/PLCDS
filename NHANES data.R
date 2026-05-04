@@ -144,10 +144,19 @@ message("Total mortality records loaded: ", nrow(mortality_df))
 
 jointdata_mortality <- left_join(target_population, mortality_df, by="SEQN")
 
-create_report(jointdata_mortality, output_file = "EDA_Report_Mortality.html", output_dir = "reports")
+# Clean dataset (remove NA's in Eligibility, Sodium, Protein, and Heart Failure for future analyses)
 
+df_clean <- jointdata_mortality %>%
+  filter(
+    !is.na(Eligibility) & Eligibility == 1,  # Only eligible participants
+    !is.na(Sodium_mg),                       # Remove records with missing Sodium
+    !is.na(Protein_g),                         # Remove records with missing Protein
+    !is.na(HeartFailure)                      # Remove records with missing Heart Failure status
+  )
+  
+create_report(df_clean, output_file = "EDA_Report_Mortality.html", output_dir = "reports")
 
 # Save the combined dataset for future analysis
-saveRDS(jointdata_mortality, file = "data/jointdata_mortality.rds")
+saveRDS(df_clean, file = "data/df_clean.rds")
 
 #Review the WTMEC2YR variable for representativeness and potential weighting in future analyses
