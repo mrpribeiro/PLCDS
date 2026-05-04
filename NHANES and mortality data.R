@@ -41,7 +41,7 @@ get_clinical_data <- function(suffix) {
     dpq  <- nhanes(paste0("DPQ_", suffix))  # Depression (PHQ-9)
     tchol<- nhanes(paste0("TCHOL_", suffix))# Total cholesterol
   
-  #Add more tables as needed (e.g., dietary, physical activity, etc.)   
+#Add more tables as needed (e.g., dietary, physical activity, etc.)   
   #    
   # --- SELECT VARIABLES ---
 
