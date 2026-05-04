@@ -12,7 +12,7 @@ library(dplyr)          # A grammar for data manipulation and transformation
 library(tidyr)          # Tools for tidying data (pivoting, nesting, unnesting)
 library(purrr)          # Functional programming toolkit (map/reduce operations)
 library(ggplot2)        # Advanced data visualization based on the Grammar of Graphics
-
+library(DataExplorer)   # Automated EDA (missing data, distributions, correlations, etc.)
 # ==============================================================================
 # 
 # The proposal focuses on the 2011-2018 cycles to increase statistical power[cite: 1].
@@ -47,9 +47,7 @@ get_clinical_data <- function(suffix) {
   # 2.2 Outcome Variable: Heart Failure
   # MCQ160B: 1 = Yes, 2 = No
   m_clean <- mcq %>% 
-    select(SEQN, HeartFailure_Raw = MCQ160B) %>%
-    mutate(Heart_Failure = ifelse(HeartFailure_Raw == 1, 1, 0)) %>%
-    select(-HeartFailure_Raw)
+    select(SEQN, HeartFailure = MCQ160B)
 
   # 2.3 Nutritional Predictors[cite: 1]
   nutr_clean <- nutr %>% 
@@ -62,8 +60,7 @@ get_clinical_data <- function(suffix) {
   b_clean <- bmx %>% select(SEQN, BMI = BMXBMI)
   
   diq_clean <- diq %>% 
-    select(SEQN, Diabetes_Raw = DIQ010) %>%
-    mutate(Diabetes = ifelse(Diabetes_Raw == 1, 1, 0)) %>% select(-Diabetes_Raw)
+    select(SEQN, Diabetes = DIQ010)
 
   # Blood Pressure: Mean of the 3 systolic measurements (Measured Hypertension)[cite: 1]
   bpx_clean <- bpx %>% 
@@ -147,3 +144,10 @@ message("Total mortality records loaded: ", nrow(mortality_df))
 
 jointdata_mortality <- left_join(target_population, mortality_df, by="SEQN")
 
+create_report(jointdata_mortality, output_file = "EDA_Report_Mortality.html", output_dir = "reports")
+
+
+# Save the combined dataset for future analysis
+saveRDS(jointdata_mortality, file = "data/jointdata_mortality.rds")
+
+#Review the WTMEC2YR variable for representativeness and potential weighting in future analyses
