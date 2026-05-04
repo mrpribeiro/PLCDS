@@ -157,6 +157,6 @@ df_clean <- jointdata_mortality %>%
 create_report(df_clean, output_file = "EDA_Report_Mortality.html", output_dir = "reports")
 
 # Save the combined dataset for future analysis
-saveRDS(df_clean, file = "data/df_clean.rds")
+saveRDS(df_clean, file = "df_clean.rds")
 
 #Review the WTMEC2YR variable for representativeness and potential weighting in future analyses
