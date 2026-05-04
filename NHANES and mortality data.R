@@ -114,8 +114,8 @@ all_clinical <- map_df(cycles, get_clinical_data)
 
 target_population <- all_clinical %>%
     filter(
-      Age >= 18                           # Adults only
-      )
+      Age >= 18) %>% #Adults only
+      HF_Medication = as.factor(HF_Medication) # Convert to factor for later analysis
 
 message(paste("Total Clinical Records Found:", nrow(all_clinical)))
 
