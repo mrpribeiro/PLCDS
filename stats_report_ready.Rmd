@@ -1,0 +1,252 @@
+---
+title: "Análise do Risco de Insuficiência Cardíaca associado ao Consumo de Sódio e Proteína"
+subtitle: "Dados NHANES (Ciclos Combinados 2011-2018)"
+author: "Mariana Ribeio"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+# Configurações globais do relatório
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+# Preparação e Carregamento de Pacotes
+
+Nesta secção inicial, carregamos as bibliotecas necessárias para a manipulação de dados (`dplyr`, `stringr`), análise de amostras complexas (`survey`) e estatística descritiva (`tableone`). Adicionámos o `knitr` e `kableExtra` para a formatação das tabelas do relatório final.
+
+```{r pacotes}
+# Instalar se necessário: install.packages(c("dplyr", "survey", "stringr", "tableone", "knitr", "kableExtra"))
+library(dplyr)
+library(survey)
+library(stringr)
+library(tableone)
+library(knitr)
+library(kableExtra)
+```
+
+# Importação de Dados
+
+> **NOTA:** O bloco abaixo gera dados simulados para efeitos de desenvolvimento e parametrização do *dashboard*. **Quando os dados reais do NHANES estiverem prontos, este bloco deve ser substituído pela leitura do ficheiro CSV/Excel correspondente.**
+
+```{r importacao_dados}
+set.seed(123) 
+n_obs <- 1000
+
+dados_brutos <- data.frame(
+        SEQN = 1:n_obs,
+        
+        # Variáveis de Desenho Amostral
+        WTMEC2YR = runif(n_obs, min = 5000, max = 150000), 
+        SDMVSTRA = sample(1:15, n_obs, replace = TRUE),    
+        SDMVPSU  = sample(1:5, n_obs, replace = TRUE),
+        
+        # Variável Dependente (Outcome)
+        MCQ160B = sample(c(1, 2, 7, 9), n_obs, replace = TRUE, prob = c(0.1, 0.85, 0.025, 0.025)),
+        
+        # Variáveis Independentes Nutricionais
+        DR1TSODI = rnorm(n_obs, mean = 3400, sd = 1000), 
+        DR1TPROT = rnorm(n_obs, mean = 80, sd = 20),     
+        DR1TKCAL = rnorm(n_obs, mean = 2000, sd = 500),  
+        DR1IFDCD = sample(c(1000, 2000, 3000), n_obs, replace = TRUE),
+        
+        # Fatores Demográficos e Socioeconómicos
+        RIDAGEYR = sample(18:80, n_obs, replace = TRUE), 
+        RIAGENDR = sample(1:2, n_obs, replace = TRUE),   
+        INDFMPIR = runif(n_obs, min = 0, max = 5),       
+        DMDEDUC2 = sample(1:5, n_obs, replace = TRUE),
+        
+        # Variáveis Clínicas / Comorbilidades
+        BMXBMI = rnorm(n_obs, mean = 28, sd = 6),        
+        DIQ010 = sample(1:3, n_obs, replace = TRUE, prob = c(0.15, 0.8, 0.05)), 
+        BPXSY1 = rnorm(n_obs, mean = 120, sd = 15),
+        
+        # Medicação
+        RXDDRUG = sample(c("FUROSEMIDE", "LISINOPRIL", "IBUPROFEN", "METFORMIN", "NONE"), n_obs, replace = TRUE)
+)
+
+dados_brutos
+```
+
+# Transformação de Dados e Método de Willett
+
+## 3.1 Limpeza e Fatores Clínicos
+
+A variável dependente (Insuficiência Cardíaca) é convertida num formato estritamente binário para viabilizar a regressão logística. As restantes variáveis numéricas são recodificadas com rótulos semânticos para garantir tabelas legíveis, incluindo o ajuste dos pesos para o agrupamento de 4 ciclos do NHANES (8 anos).
+
+```{r transformacao_dados}
+dados_analise <- dados_brutos %>%
+        mutate(
+                IC_Binaria = case_when(
+                        MCQ160B == 1 ~ 1,
+                        MCQ160B == 2 ~ 0,
+                        TRUE ~ NA_real_
+                ),
+                WTMEC8YR = WTMEC2YR / 4,
+                Genero = factor(RIAGENDR, levels = c(1, 2), labels = c("Masculino", "Feminino")),
+                Educacao = factor(DMDEDUC2, 
+                                  levels = c(1, 2, 3, 4, 5), 
+                                  labels = c("< 9º Ano", "9º a 12º Ano", "Secundário Completo", 
+                                             "Frequência Universitária", "Licenciatura ou +")),
+                Diabetes = factor(ifelse(DIQ010 == 1, 1, 0), levels = c(0, 1), labels = c("Não", "Sim")),
+                Toma_Medicacao_Cardio = factor(ifelse(str_detect(toupper(RXDDRUG), "FUROSEMIDE|LISINOPRIL|HCTZ"), 1, 0),
+                                               levels = c(0, 1), labels = c("Não", "Sim")),
+                Origem_Proteina = factor(case_when(
+                        DR1IFDCD == 1000 ~ "Animal",
+                        DR1IFDCD == 2000 ~ "Vegetal",
+                        TRUE ~ "Mista"
+                ), levels = c("Mista", "Animal", "Vegetal"))
+        ) %>%
+        filter(!is.na(IC_Binaria) & !is.na(WTMEC8YR) & !is.na(DR1TKCAL))
+```
+
+## 3.2 Método dos Resíduos de Willett
+
+Para mitigar o viés de volume nutricional, ajustamos o sódio e a proteína ingeridos com base na ingestão energética total (calorias). Extraímos os resíduos de modelos de regressão linear simples e somamos a média populacional para devolver os valores a uma escala interpretável para o utilizador final.
+
+```{r willett}
+modelo_sodio_cal = lm(DR1TSODI ~ DR1TKCAL, data = dados_analise)
+modelo_prot_cal  = lm(DR1TPROT ~ DR1TKCAL, data = dados_analise)
+
+media_sodio = mean(dados_analise$DR1TSODI, na.rm = TRUE)
+media_prot  = mean(dados_analise$DR1TPROT, na.rm = TRUE)
+
+dados_analise <- dados_analise %>%
+        mutate(
+                Sodio_Willett = resid(modelo_sodio_cal) + media_sodio,
+                Prot_Willett  = resid(modelo_prot_cal) + media_prot
+        )
+```
+
+# Análise Ponderada (Survey Design)
+
+O pacote `survey` é utilizado para declarar as Unidades Primárias de Amostragem (PSU), os Estratos e os Pesos amostrais. Isto garante que as inferências refletem toda a população dos EUA.
+
+```{r survey_design}
+nhanes_design <- svydesign(
+        id      = ~SDMVPSU, 
+        strata  = ~SDMVSTRA, 
+        weights = ~WTMEC8YR, 
+        nest    = TRUE, 
+        data    = dados_analise
+)
+```
+
+## Tabela 1: Características Demográficas e Clínicas
+
+Abaixo, apresentamos a distribuição das características da população alvo, estratificada pela presença de Insuficiência Cardíaca, ajustada aos pesos do NHANES.
+
+```{r tabela_1}
+vars_tabela <- c("Sodio_Willett", "Prot_Willett", "Origem_Proteina", "RIDAGEYR", 
+                 "Genero", "INDFMPIR", "Educacao", "BMXBMI", 
+                 "Diabetes", "BPXSY1", "Toma_Medicacao_Cardio")
+
+vars_cat <- c("Origem_Proteina", "Genero", "Educacao", "Diabetes", "Toma_Medicacao_Cardio")
+
+tabela_1_ponderada <- svyCreateTableOne(
+        vars = vars_tabela,
+        strata = "IC_Binaria", 
+        data = nhanes_design,
+        factorVars = vars_cat
+)
+
+# Renderização elegante com kableExtra
+kableone(tabela_1_ponderada, showAllLevels = TRUE, formatOptions = list(big.mark = ",")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F)
+```
+
+# Resultados do Modelo Logístico
+
+Aplicamos um modelo quasi-binomial (apropriado para dados de inquérito complexos) para extrair os preditores de Insuficiência Cardíaca.
+
+```{r modelacao}
+modelo_final <- svyglm(
+        IC_Binaria ~ Sodio_Willett + Prot_Willett + Origem_Proteina + RIDAGEYR +
+                Genero + INDFMPIR + Educacao + BMXBMI + Diabetes + 
+                BPXSY1 + Toma_Medicacao_Cardio, 
+        design = nhanes_design, 
+        family = quasibinomial()
+)
+
+# Extração e formatação matemática (Odds Ratio e Intervalos de Confiança)
+tabela_OR <- tabela_OR %>%
+        mutate(Variavel = case_when(
+                Variavel == "(Intercept)" ~ "Interceto",
+                Variavel == "Sodio_Willett" ~ "Sódio: Ajustado p/ Calorias (mg)",
+                Variavel == "Prot_Willett" ~ "Proteína: Ajustada p/ Calorias (g)",
+                Variavel == "Origem_ProteinaAnimal" ~ "Proteína Animal (Ref: Mista)",
+                Variavel == "Origem_ProteinaVegetal" ~ "Proteína Vegetal (Ref: Mista)",
+                Variavel == "RIDAGEYR" ~ "Idade (Anos)",
+                Variavel == "GeneroFeminino" ~ "Género: Feminino",
+                Variavel == "INDFMPIR" ~ "Rácio Rendimento/Pobreza (PIR)",
+                str_detect(Variavel, "Educacao9") ~ "Educação: 9º a 12º Ano",
+                str_detect(Variavel, "EducacaoSec") ~ "Educação: Secundário Completo",
+                str_detect(Variavel, "EducacaoFreq") ~ "Educação: Freq. Universitária",
+                str_detect(Variavel, "EducacaoLic") ~ "Educação: Licenciatura ou +",
+                Variavel == "BMXBMI" ~ "Índice de Massa Corporal (IMC)",
+                Variavel == "DiabetesSim" ~ "Comorbilidade: Diabetes (Sim)",
+                Variavel == "BPXSY1" ~ "Pressão Arterial Sistólica (mmHg)",
+                Variavel == "Toma_Medicacao_CardioSim" ~ "Medicação: Anti-hipertensores (Sim)",
+                TRUE ~ Variavel # Mantém o nome original se me tiver esquecido de algum
+        ))
+
+
+kable(tabela_OR, col.names = c("Variável", "Odds Ratio", "IC 2.5%", "IC 97.5%"), align = "lccc") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = F)
+```
+
+# Dados Exportados para Interface Gráfica (Dashboard)
+
+As matrizes seguintes foram geradas como termos de comparação para o desenvolvimento da plataforma web.
+
+## 6.1 Percentis Populacionais (Comparação Relativa)
+
+Para situar o utilizador em relação à amostra representativa dos EUA, com base na variável bruta de Sódio e Proteína.
+
+```{r percentis}
+percentis_nutricao <- svyquantile(
+        ~DR1TSODI + DR1TPROT, 
+        design = nhanes_design,
+        quantiles = c(0.25, 0.50, 0.75, 0.90, 0.95), 
+        na.rm = TRUE
+)
+
+# Extração específica para lidar com a classe 'newsvyquantile' das versões recentes do pacote survey
+tabela_percentis <- as.data.frame(do.call(rbind, lapply(percentis_nutricao, function(x) x[, 1])))
+colnames(tabela_percentis) <- c("P25", "P50", "P75", "P90", "P95")
+rownames(tabela_percentis) <- c("Sódio (mg)", "Proteína (g)")
+
+# Conversão em tabela HTML elegante
+kable(tabela_percentis, digits = 1, align = "c") %>%
+  kable_styling(bootstrap_options = c("striped", "condensed", "hover"), full_width = F)
+```
+
+## 6.2 Matriz de Curva de Risco Predita
+
+Probabilidades calculadas para o doente padrão fictício (Homem, 50 anos, IMC=28, Média de Proteína), alterando exclusivamente a exposição teórica ao Sódio Residual.
+
+```{r curva_risco}
+cenarios_sodio <- data.frame(
+        Sodio_Willett = seq(from = 1500, to = 6000, by = 500), 
+        Prot_Willett = mean(dados_analise$Prot_Willett, na.rm = TRUE),
+        Origem_Proteina = factor("Mista", levels = c("Mista", "Animal", "Vegetal")),
+        RIDAGEYR = 50,
+        Genero = factor("Masculino", levels = c("Masculino", "Feminino")),
+        INDFMPIR = 2.0, 
+        Educacao = factor("Secundário Completo", levels = levels(dados_analise$Educacao)),
+        BMXBMI = 28,
+        Diabetes = factor("Não", levels = c("Não", "Sim")),
+        BPXSY1 = 120, 
+        Toma_Medicacao_Cardio = factor("Não", levels = c("Não", "Sim"))
+)
+
+probabilidades_calculadas <- predict(modelo_final, newdata = cenarios_sodio, type = "response")
+
+matriz_dashboard <- data.frame(
+        Sodio_Isolado_mg = cenarios_sodio$Sodio_Willett,
+        Risco_IC_Percentagem = as.numeric(probabilidades_calculadas) * 100
+)
+
+kable(matriz_dashboard, col.names = c("Sódio de Willett (mg)", "Risco Estimado IC (%)"), digits = 2, align = "cc") %>%
+  kable_styling(bootstrap_options = c("striped", "condensed"), full_width = F)
+```
