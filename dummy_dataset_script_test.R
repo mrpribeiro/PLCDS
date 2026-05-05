@@ -215,5 +215,68 @@ tabela_OR <- data.frame(
 tabela_OR <- tabela_OR %>%
         mutate(across(where(is.numeric), ~ round(.x, 3)))
 
-print("--- RESULTADOS DO MODELO (ODDS RATIO) ---")
+print("--- RESULTADOS DO MODELO (ODDS RATIO e IC 95%) ---")
 print(tabela_OR, 3)
+
+# Arredondar APENAS as colunas que são numéricas (OR, IC_2.5, IC_97.5) a 3 casas decimais
+tabela_OR <- tabela_OR %>%
+        mutate(across(where(is.numeric), ~ round(.x, 3)))
+
+print("--- RESULTADOS DO MODELO (ODDS RATIO E IC 95%) ---")
+print(tabela_OR)
+
+# ==============================================================================
+# 7. PERCENTIS POPULACIONAIS (TERMO DE COMPARAÇÃO PARA O DASHBOARD)
+# ==============================================================================
+# O pacote survey tem uma função específica para calcular quantis respeitando 
+# os pesos amostrais e os estratos geográficos.
+percentis_nutricao <- svyquantile(
+        ~DR1TSODI + DR1TPROT, # Usamos as variáveis originais (não as de Willett)
+        design = nhanes_design,
+        quantiles = c(0.25, 0.50, 0.75, 0.90, 0.95), # P25 a P95
+        na.rm = TRUE
+)
+
+print("--- PERCENTIS POPULACIONAIS REAIS (EUA) ---")
+print(percentis_nutricao)
+
+# ==============================================================================
+# 8. MATRIZ DE PROBABILIDADE PREDITA (CURVAS DE RISCO PARA O DASHBOARD)
+# ==============================================================================
+# Para o Membro 3 conseguir desenhar um gráfico de linha interativo, o R precisa 
+# de fixar o perfil de um "doente padrão" e variar artificialmente apenas o Sódio.
+
+# 1. Definir o perfil clínico padrão (Controlar o ruído)
+cenarios_sodio <- data.frame(
+        # Vamos simular o risco de alguém que consome entre 1500mg e 6000mg de sódio residual
+        Sodio_Willett = seq(from = 1500, to = 6000, by = 500), 
+        
+        # Todas as outras variáveis ficam bloqueadas num valor fixo (ex: a média ou a moda)
+        Prot_Willett = mean(dados_analise$Prot_Willett, na.rm = TRUE),
+        Origem_Proteina = factor("Mista", levels = c("Mista", "Animal", "Vegetal")),
+        RIDAGEYR = 50, # Idade fixa nos 50 anos
+        Genero = factor("Masculino", levels = c("Masculino", "Feminino")),
+        INDFMPIR = 2.0, 
+        Educacao = factor("Secundário Completo", levels = levels(dados_analise$Educacao)),
+        BMXBMI = 28, # IMC fixo em pré-obesidade (típico da amostra)
+        Diabetes = factor("Não", levels = c("Não", "Sim")),
+        BPXSY1 = 120, 
+        Toma_Medicacao_Cardio = factor("Não", levels = c("Não", "Sim"))
+)
+
+# 2. Gerar as probabilidades usando o modelo logístico
+# O argumento type = "response" é obrigatório para converter log-odds em percentagens (0 a 1)
+probabilidades_calculadas <- predict(
+        modelo_final, 
+        newdata = cenarios_sodio, 
+        type = "response"
+)
+
+# 3. Unir o Sódio e a Probabilidade numa tabela limpa para exportação
+matriz_dashboard <- data.frame(
+        Sodio_Isolado_mg = cenarios_sodio$Sodio_Willett,
+        Risco_IC_Percentagem = as.numeric(probabilidades_calculadas) * 100
+)
+
+print("--- MATRIZ DE PROBABILIDADE (CURVA DE RISCO) ---")
+print(round(matriz_dashboard, 2))
