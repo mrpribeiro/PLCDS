@@ -30,7 +30,8 @@ get_clinical_data <- function(suffix) {
   bmx  <- nhanes(paste0("BMX_", suffix))     # Body measures (BMI)
   bpx  <- nhanes(paste0("BPX_", suffix))     # Blood Pressure (Measured)
   diq  <- nhanes(paste0("DIQ_", suffix))     # Diabetes
-
+  pro <- nhanes(paste0("DR1IFF_", suffix))   # Individual Foods (for future dietary pattern analysis)
+  med <- nhanes(paste0("RXQ_RX_", suffix))   # Prescription Medications (for future confounder adjustment)
   
 
   # --- 2. SELECT & CLEAN VARIABLES ---
@@ -42,7 +43,9 @@ get_clinical_data <- function(suffix) {
            Gender = RIAGENDR, 
            Poverty_Index_Ratio = INDFMPIR, 
            Education = DMDEDUC2,  # Added education level as per the proposal
-           Weight_MEC = WTMEC2YR)
+           Weight_MEC = WTMEC2YR,
+          Strata = SDMVSTRA,
+          PSU = SDMVPSU)
 
   # 2.2 Outcome Variable: Heart Failure
   # MCQ160B: 1 = Yes, 2 = No
@@ -54,7 +57,8 @@ get_clinical_data <- function(suffix) {
     select(SEQN, 
            Sodium_mg = DR1TSODI, 
            Protein_g = DR1TPROT, 
-           Energy_kcal = DR1TKCAL) # Useful to adjust the ratio for total energy intake[cite: 1]
+           Energy_kcal = DR1TKCAL,
+          ) # Useful to adjust the ratio for total energy intake[cite: 1]
 
   # 2.4 Clinical Variables and Comorbidities
   b_clean <- bmx %>% select(SEQN, BMI = BMXBMI)
@@ -68,10 +72,42 @@ get_clinical_data <- function(suffix) {
     mutate(Mean_Systolic = mean(c(BPXSY1, BPXSY2, BPXSY3), na.rm = TRUE),
            Mean_Diastolic = mean(c(BPXDI1, BPXDI2, BPXDI3), na.rm = TRUE)) %>%
     select(SEQN, Mean_Systolic, Mean_Diastolic)
-
- 
   
-  # --- 4. MERGE ---
+  # Protein origin
+    
+  pro_clean <- pro %>%
+  group_by(SEQN) %>%
+  summarise(
+    Total_Animal_Protein_g = sum(if_else(substr(as.character(DR1IFDCD), 1, 1) %in% c("1","2","3"),
+                                         as.numeric(DR1IPROT), 0), # Codes starting with 1, 2, and 3 are animal-based foods (1 - Milk and milk products, 2 - Meat, poultry, fish, and mixtures, 3 - Eggs)
+                                 na.rm = TRUE),
+    Total_Plant_Protein_g  = sum(if_else(substr(as.character(DR1IFDCD), 1, 1) %in% c("4","5","6","7"),
+                                         as.numeric(DR1IPROT), 0), # Codes starting with 4, 5, 6 and 7 are plant-based foods (4 - Legumes, nuts, and seeds, 5 - Grain products, 6 - Fruits, 7 - Vegetables)
+                                 na.rm = TRUE),
+    .groups = "drop"
+  )
+  
+  # Medication use for heart failure (for future confounder adjustment
+  # 1. Define the target codes (ensure all variations are included)
+hf_icd_codes <- c("I50", "I50.9", "I50.1", "I50.2", "I50.3", "I50.4", "I50.9P")
+
+# 2. Collapse the data to one row per participant (SEQN)
+med_clean <- med %>%
+  rename_with(toupper) %>%
+  group_by(SEQN) %>%
+  summarise(
+    # Use any() to check across all medications the person takes
+    HF_Medication = as.factor(any(
+      if_any(
+        any_of(c("RXDRSC1", "RXDRSC2", "RXDRSC3")), 
+        ~ trimws(.x) %in% hf_icd_codes
+      ), 
+      na.rm = TRUE
+    )),
+    .groups = "drop"
+  )
+ 
+  # ---  MERGE ---
   
   tabular_data_NHANES <- d_clean %>%
     left_join(m_clean, by="SEQN") %>%
@@ -79,6 +115,8 @@ get_clinical_data <- function(suffix) {
     left_join(b_clean, by="SEQN") %>%
     left_join(diq_clean, by="SEQN") %>%
     left_join(bpx_clean, by="SEQN") %>%
+    left_join(pro_clean, by="SEQN") %>%
+    left_join(med_clean, by="SEQN") %>%
     mutate(
       Cycle = suffix
     )
@@ -92,63 +130,16 @@ all_clinical <- map_df(cycles, get_clinical_data)
 # B. FILTER TARGET POPULATION
 # Crucial: General adult population[cite: 1]
 target_population <- all_clinical %>%
-    filter(Age >= 18)
+    filter(Age >= 18) # Adults only
 
 message(paste("Total Clinical Records Found:", nrow(all_clinical)))
 message(paste("Target Population (Adults):", nrow(target_population)))
 
-#For these cycles, we will fetch mortality:
-
-#Mortality data (gathered in 2019, so it includes deaths up to 2019)
-
-base_url <- "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/datalinkage/linked_mortality/"
-
-# List of files corresponding to your cycles G, H, I, J
-mort_files <- c(
-  "NHANES_2011_2012_MORT_2019_PUBLIC.dat",
-  "NHANES_2013_2014_MORT_2019_PUBLIC.dat",
-  "NHANES_2015_2016_MORT_2019_PUBLIC.dat",
-  "NHANES_2017_2018_MORT_2019_PUBLIC.dat"
-)
-
-# Function to read each specific mortality file
-
-# Function to read each specific mortality file
-read_mort_file <- function(filename) {
-  full_url <- paste0(base_url, filename)
-  message(">>> Downloading: ", filename)
-  
-  read_fwf(full_url, 
-           fwf_cols(
-             SEQN             = c(1, 6),
-             Eligibility      = c(15, 15),
-             Mortality_Status = c(16, 16),
-             Cause_of_Death   = c(17, 19),
-             Follow_up_Months = c(20, 23)
-           ),
-           na = c(".", "....", ""),
-           col_types = cols(
-             SEQN = col_double(),
-             Eligibility = col_double(),
-             Mortality_Status = col_double(),
-             Cause_of_Death = col_character(),
-             Follow_up_Months = col_double()
-           ))
-}
-
-# Download and stack all 3 cycles
-mortality_df <- lapply(mort_files, read_mort_file) %>% 
-  bind_rows()
-
-message("Total mortality records loaded: ", nrow(mortality_df))
-
-jointdata_mortality <- left_join(target_population, mortality_df, by="SEQN")
 
 # Clean dataset (remove NA's in Eligibility, Sodium, Protein, and Heart Failure for future analyses)
 
-df_clean <- jointdata_mortality %>%
+df_clean <- target_population %>%
   filter(
-    !is.na(Eligibility) & Eligibility == 1,  # Only eligible participants
     !is.na(Sodium_mg),                       # Remove records with missing Sodium
     !is.na(Protein_g),                         # Remove records with missing Protein
     !is.na(HeartFailure)                      # Remove records with missing Heart Failure status
@@ -157,6 +148,6 @@ df_clean <- jointdata_mortality %>%
 create_report(df_clean, output_file = "EDA_Report_Mortality.html", output_dir = "reports")
 
 # Save the combined dataset for future analysis
-saveRDS(df_clean, file = "data/df_clean.rds")
+saveRDS(df_clean, file = "df_clean.rds")
 
 #Review the WTMEC2YR variable for representativeness and potential weighting in future analyses
