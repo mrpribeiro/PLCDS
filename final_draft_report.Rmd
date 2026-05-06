@@ -1,0 +1,343 @@
+---
+title: "Analysis of Heart Failure Risk Associated with Sodium and Protein Consumption"
+subtitle: "NHANES Data (Combined Cycles 2011-2018)"
+author: "João Silva, Marco Pereira, Mariana Ribeiro"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+#Global report configurations
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+# 1. Preparation and Package Loading
+
+In this section, we load the necessary libraries for API extraction, data manipulation (`dplyr`, `purrr`), complex survey analysis (`survey`), and descriptive statistics (`tableone`). We also include `knitr` and `kableExtra` for rendering elegant tables in the final output.
+
+```{r packages}
+# Install if necessary: install.packages(c("dplyr", "survey", "tableone", "knitr", "kableExtra", "haven", "nhanesA", "purrr", "tidyr"))
+library(haven)          
+library(nhanesA)        
+library(readr)          
+library(dplyr)          
+library(tidyr)          
+library(purrr)          
+library(survey)
+library(stringr)
+library(tableone)
+library(knitr)
+library(kableExtra)
+```
+
+# 2. Data Import (NHANES Interface)
+
+The following block mirrors the original mapping and extraction from the CDC database for cycles G to J (2011-2018). Combining four survey cycles increases the statistical power of the analysis
+
+**Methodological Note - Complete Case Analysis:** Missing data (NAs) in clinical and socioeconomic covariates (e.g., income ratio, BMI, and blood pressure) can cause a phenomenon called "listwise deletion" during logistic regression. If NAs are fed into the survey design object, the model will silently discard incomplete patient records, which distorts the sample weights. To prevent this, a Complete Case Analysis filter is applied explicitly during extraction, ensuring the statistical model is fed exclusively with fully complete observations.
+
+> **Note:** This code block is not re-evaluated during document compilation to save network resources. It assumes the `clean_dataset.rds` file has already been generated.
+
+```{r data_import}
+cycles <- c("G", "H", "I", "J") 
+
+get_clinical_data <- function(suffix) {
+  
+  # Table Extraction
+  demo <- nhanes(paste0("DEMO_", suffix))    # Demographics (PIR, Gender, Age, Weights)
+  mcq  <- nhanes(paste0("MCQ_", suffix))     # Medical Conditions (Heart Failure)
+  nutr <- nhanes(paste0("DR1TOT_", suffix))  # Total Nutrition (Sodium, Protein)
+  bmx  <- nhanes(paste0("BMX_", suffix))     # Body measures (BMI)
+  bpx  <- nhanes(paste0("BPX_", suffix))     # Blood Pressure (Measured)
+  diq  <- nhanes(paste0("DIQ_", suffix))     # Diabetes
+  pro  <- nhanes(paste0("DR1IFF_", suffix))  # Individual Foods
+  med  <- nhanes(paste0("RXQ_RX_", suffix))  # Prescription Medications 
+
+  # Cleaning and Selection
+  d_clean <- demo %>% 
+          select(SEQN, Age = RIDAGEYR, Gender = RIAGENDR, 
+                 Poverty_Index_Ratio = INDFMPIR, Education = DMDEDUC2,
+                 Weight_MEC = WTMEC2YR, Strata = SDMVSTRA, PSU = SDMVPSU)
+  
+  m_clean <- mcq %>% select(SEQN, HeartFailure = MCQ160B)
+  
+  nutr_clean <- nutr %>%
+          select(SEQN, Sodium_mg = DR1TSODI, Protein_g = DR1TPROT,
+                 Energy_kcal = DR1TKCAL) 
+  
+  b_clean <- bmx %>%
+          select(SEQN, BMI = BMXBMI)
+  
+  diq_clean <- diq %>%
+          select(SEQN, Diabetes = DIQ010)
+  
+  bpx_clean <- bpx %>% 
+          rowwise() %>%
+          mutate(Mean_Systolic = mean(c(BPXSY1, BPXSY2, BPXSY3), na.rm = TRUE),
+                 Mean_Diastolic = mean(c(BPXDI1, BPXDI2, BPXDI3), na.rm = TRUE)) %>%
+          select(SEQN, Mean_Systolic, Mean_Diastolic)
+  
+  pro_clean <- pro %>% group_by(SEQN) %>% summarise(
+                Total_Animal_Protein_g = sum(if_else(substr(as.character(DR1IFDCD), 1, 1) %in% c("1","2","3"), as.numeric(DR1IPROT), 0), na.rm = TRUE),
+                Total_Plant_Protein_g  = sum(if_else(substr(as.character(DR1IFDCD), 1, 1) %in% c("4","5","6","7"), as.numeric(DR1IPROT), 0), na.rm = TRUE),
+    .groups = "drop"
+  )
+  
+  hf_icd_codes <- c("I50", "I50.9", "I50.1", "I50.2", "I50.3", "I50.4", "I50.9P")
+  
+  med_clean <- med %>% rename_with(toupper) %>% group_by(SEQN) %>% summarise(
+                  HF_Medication = as.factor(any(if_any(any_of(c("RXDRSC1", "RXDRSC2", "RXDRSC3")), ~ trimws(.x) %in% hf_icd_codes), na.rm = TRUE)),
+                  .groups = "drop"
+  )
+ 
+  # Merging Datasets
+  tabular_data_NHANES <- d_clean %>%
+          left_join(m_clean, by="SEQN") %>% left_join(nutr_clean, by="SEQN") %>% 
+          left_join(b_clean, by="SEQN") %>% left_join(diq_clean, by="SEQN") %>%
+          left_join(bpx_clean, by="SEQN") %>% left_join(pro_clean, by="SEQN") %>%
+          left_join(med_clean, by="SEQN") %>% mutate(Cycle = suffix)
+  
+  return(tabular_data_NHANES)
+}
+
+# Download and Combine Cycles
+all_clinical <- map_df(cycles, get_clinical_data)
+
+# Filter Adult Target Population 
+target_population <- all_clinical %>% filter(Age >= 18)
+
+# Removing NAs & Invalid Responses (Complete Case Analysis)
+df_clean <- target_population %>%
+        filter(
+                # Ensure no NAs exist in ANY variable used in the model
+                !is.na(Sodium_mg), !is.na(Protein_g), !is.na(Energy_kcal),
+                !is.na(Poverty_Index_Ratio), !is.na(BMI), !is.na(Mean_Systolic),
+                !is.na(Total_Animal_Protein_g),
+                
+                # Filter valid responses (Remove "Refused" and "Don't know")
+                HeartFailure %in% c("Yes", "No"),
+                Diabetes %in% c("Yes", "No", "Borderline"),
+                !(Education %in% c("Refused", "Don't Know", "Don't know"))
+        )
+
+saveRDS(df_clean, file = "data/clean_dataset.rds")
+```
+
+```{r}
+# Load the cleaned data exported 
+df_clean <- readRDS("data/clean_dataset.rds")
+```
+
+# 3. Data Transformation and Methodologies
+
+## 3.1 Cleaning and Clinical Factors
+
+The dependent variable (Heart Failure) is converted into a strictly binary format to enable logistic regression. Categorical covariates are structured into factors with pre-defined reference categories
+
+#### Key Methodological Decisions:
+
+-   **Weight Adjustment for Pooled Cycles (`WTMEC8YR`):** The original NHANES weight (`Weight_MEC`) represents the US population over a 2-year cycle. Because we are combining 4 cycles (8 years of data), we must divide the weights by 4. Failure to do so would artificially inflate the population size to over 1.2 billion, heavily distorting variance and confidence intervals.
+
+-   **Diabetes Categorisation:** Instead of a binary variable, Diabetes is assessed across 3 clinical levels: "No", "Pre-diabetes" (Borderline), and "Yes". This provides better clinical resolution, preventing the contamination of the healthy reference group with insulin-resistant patients.
+
+-   **Protein Source Thresholds:** To categorise diet types, we rely on recent clinical evidence (Perraud et al., 2023; DOI: 10.3389/fnut.2023.1178121). A fully healthy adult diet threshold accommodates between 25% to 70% plant protein (equivalent to 30% to 75% animal origin). This evidence-based buffer defines our "Mixed" reference category, avoiding arbitrary 50/50 cut-offs.
+
+```{r data_transformation}
+analysis_data <- df_clean %>%
+        mutate(
+        # Outcome Variable 
+        HF_Binary = ifelse(HeartFailure == "Yes", 1, 0),
+        
+        # Adjusting weights for the pooling of 4 NHANES cycles (8 years)
+        Weight_MEC8 = Weight_MEC / 4,
+                
+        # Adjustment Factors (Formatting for Table 1)
+        Gender_Clean = factor(ifelse(Gender == "Male", "Male", "Female"), levels = c("Male", "Female")),
+                
+        Education_Clean = factor(case_when(
+                str_detect(Education, "Less than 9th") ~ "< 9th Grade",
+                str_detect(Education, "9-11th grade") ~ "9th to 11th Grade",
+                str_detect(Education, "High school graduate") ~ "High School Graduate",
+                str_detect(Education, "Some college") ~ "Some College",
+                str_detect(Education, "College graduate") ~ "College Graduate or +",
+                TRUE ~ "Unknown"
+        ), levels = c("< 9th Grade", "9th to 11th Grade", "High School Graduate", "Some College", "College Graduate or +")),
+                
+        # Diabetes with 3 clinical categories (Reference: No)
+        Diabetes_Clean = factor(case_when(
+                Diabetes == "No" ~ "No",
+                Diabetes == "Borderline" ~ "Pre-diabetes",
+                Diabetes == "Yes" ~ "Yes"
+        ), levels = c("No", "Pre-diabetes", "Yes")),
+                
+        Medication_Use = factor(ifelse(HF_Medication == TRUE, "Yes", "No"), levels = c("No", "Yes")),
+                
+        # Clinical Rule for Protein Origin (30% to 75% Animal = Mixed/Healthy)
+        Animal_Ratio = Total_Animal_Protein_g / Protein_g,
+        Protein_Origin = factor(case_when(
+                Animal_Ratio > 0.75 ~ "Animal",
+                Animal_Ratio < 0.30 ~ "Plant",
+                TRUE ~ "Mixed"
+        ), levels = c("Mixed", "Animal", "Plant"))
+        )
+```
+
+## 3.2 Willett's Residual Method
+
+To mitigate "volume bias", we adjust sodium and protein intakes based on total energy intake (calories). The goal is to identify patients who consume a *disproportionately* high amount of sodium relative to their energetic needs, rather than penalising athletes or individuals with naturally high caloric requirements. We extract mathematical residuals from linear regression models and add the population mean to return the values to an interpretable scale.
+
+```{r willett}
+model_sodium_cal = lm(Sodium_mg ~ Energy_kcal, data = analysis_data)
+model_prot_cal   = lm(Protein_g ~ Energy_kcal, data = analysis_data)
+
+mean_sodium = mean(analysis_data$Sodium_mg, na.rm = TRUE)
+mean_prot   = mean(analysis_data$Protein_g, na.rm = TRUE)
+
+analysis_data <- analysis_data %>%
+        mutate(
+                Sodium_Willett = resid(model_sodium_cal) + mean_sodium,
+                Protein_Willett  = resid(model_prot_cal) + mean_prot
+        )
+```
+
+# 4. Weighted Analysis (Survey Design)
+
+The `survey` package is utilised to declare Primary Sampling Units (PSUs), Strata, and Sample Weights. This step overrides standard assumptions of equal variance, guaranteeing that all inferences reflect the true demographics of the US population
+
+```{r survey_design}
+nhanes_design <- svydesign(
+        id      = ~PSU, 
+        strata  = ~Strata, 
+        weights = ~Weight_MEC8, 
+        nest    = TRUE, 
+        data    = analysis_data
+)
+```
+
+## Table 1: Demographic and Clinical Characteristics
+
+Below is the distribution of the target population's characteristics, stratified by the presence of Heart Failure and adjusted to NHANES weights.
+
+```{r table_1}
+vars_table <- c("Sodium_Willett", "Protein_Willett", "Protein_Origin", "Age", 
+                 "Gender_Clean", "Poverty_Index_Ratio", "Education_Clean", "BMI", 
+                 "Diabetes_Clean", "Mean_Systolic", "Medication_Use")
+
+vars_cat <- c("Protein_Origin", "Gender_Clean", "Education_Clean", "Diabetes_Clean", "Medication_Use")
+
+table_1_weighted <- svyCreateTableOne(
+        vars = vars_table,
+        strata = "HF_Binary", 
+        data = nhanes_design,
+        factorVars = vars_cat
+)
+
+# Elegant rendering via kableExtra
+kableone(table_1_weighted, showAllLevels = TRUE, formatOptions = list(big.mark = ",")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F)
+```
+
+# 5. Logistic Model Results
+
+A quasi-binomial model (appropriate for complex survey data) is applied to extract the predictors of Heart Failure.
+
+```{r model}
+final_model <- svyglm(
+                HF_Binary ~ Sodium_Willett + Protein_Willett + Protein_Origin +
+                Age + Gender_Clean + Poverty_Index_Ratio + Education_Clean + BMI + 
+                Diabetes_Clean + Mean_Systolic + Medication_Use, 
+        design = nhanes_design, 
+        family = quasibinomial()
+)
+
+# Mathematical Extraction (Odds Ratio and Confidence Intervals)
+table_OR <- data.frame(
+        Variable = names(coef(final_model)),
+        OR = exp(coef(final_model)),
+        CI_2.5 = exp(confint(final_model))[,1],
+        CI_97.5 = exp(confint(final_model))[,2],
+        row.names = NULL
+) %>%
+        mutate(across(where(is.numeric), ~ round(.x, 3)))
+
+# Lexical Cleaning for Presentation
+table_OR <- table_OR %>%
+        mutate(Variable = case_when(
+                Variable == "(Intercept)" ~ "Intercept",
+                Variable == "Sodium_Willett" ~ "Sodium: Energy-adjusted (mg)",
+                Variable == "Protein_Willett" ~ "Protein: Energy-adjusted (g)",
+                Variable == "Protein_OriginAnimal" ~ "Animal Protein (Ref: Mixed)",
+                Variable == "Protein_OriginPlant" ~ "Plant Protein (Ref: Mixed)",
+                Variable == "Age" ~ "Age (Years)",
+                Variable == "Gender_CleanFemale" ~ "Gender: Female",
+                Variable == "Poverty_Index_Ratio" ~ "Income-to-Poverty Ratio (PIR)",
+                str_detect(Variable, "Education_Clean9th") ~ "Education: 9th to 11th Grade",
+                str_detect(Variable, "Education_CleanHigh") ~ "Education: High School Graduate",
+                str_detect(Variable, "Education_CleanSome") ~ "Education: Some College",
+                str_detect(Variable, "Education_CleanCollege") ~ "Education: College Graduate or +",
+                Variable == "BMI" ~ "Body Mass Index (BMI)",
+                Variable == "Diabetes_CleanPre-diabetes" ~ "Comorbidity: Pre-diabetes (Ref: No)",
+                Variable == "Diabetes_CleanYes" ~ "Comorbidity: Diabetes (Ref: No)",
+                Variable == "Mean_Systolic" ~ "Mean Systolic Blood Pressure (mmHg)",
+                Variable == "Medication_UseYes" ~ "Medication: Adjustment Factor (Yes)",
+                TRUE ~ Variable 
+        ))
+
+kable(table_OR, col.names = c("Variable", "Odds Ratio", "95% CI (Lower)", "95% CI (Upper)"), align = "lccc") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = F)
+```
+
+# 6. Exported Data for Graphical Interface (Dashboard)
+
+The following matrices were generated as comparative baselines for the web platform development.
+
+## 6.1 Population Percentiles (Relative Comparison)
+
+To contextualise the user against the representative US sample, based on raw Sodium and Protein variables.
+
+```{r percentile}
+nutrition_percentiles <- svyquantile(
+        ~Sodium_mg + Protein_g, 
+        design = nhanes_design,
+        quantiles = c(0.25, 0.50, 0.75, 0.90, 0.95), 
+        na.rm = TRUE
+)
+
+# Specific extraction to handle the 'newsvyquantile' class in survey package updates
+table_percentiles <- as.data.frame(do.call(rbind, lapply(nutrition_percentiles, function(x) x[, 1])))
+colnames(table_percentiles) <- c("P25", "P50", "P75", "P90", "P95")
+rownames(table_percentiles) <- c("Sodium (mg)", "Protein (g)")
+
+kable(table_percentiles, digits = 1, align = "c") %>%
+  kable_styling(bootstrap_options = c("striped", "condensed", "hover"), full_width = F)
+```
+
+## 6.2 Predicted Risk Curve Matrix
+
+Probabilities calculated for a fictitious standard patient profile (Male, 50 years old, BMI=28, Mean Protein intake), exclusively altering theoretical exposure to Residual Sodium.
+
+```{r risk curve}
+sodium_scenarios <- data.frame(
+        Sodium_Willett = seq(from = 1500, to = 6000, by = 500), 
+        Protein_Willett = mean(analysis_data$Protein_Willett, na.rm = TRUE),
+        Protein_Origin = factor("Mixed", levels = c("Mixed", "Animal", "Plant")),
+        Age = 50,
+        Gender_Clean = factor("Male", levels = c("Male", "Female")),
+        Poverty_Index_Ratio = 2.0, 
+        Education_Clean = factor("High School Graduate", levels = levels(analysis_data$Education_Clean)),
+        BMI = 28,
+        Diabetes_Clean = factor("No", levels = c("No", "Pre-diabetes", "Yes")),
+        Mean_Systolic = 120, 
+        Medication_Use = factor("No", levels = c("No", "Yes"))
+)
+
+calculated_probabilities <- predict(final_model, newdata = sodium_scenarios, type = "response")
+
+dashboard_matrix <- data.frame(
+        Isolated_Sodium_mg = sodium_scenarios$Sodium_Willett,
+        Estimated_HF_Risk_Percent = as.numeric(calculated_probabilities) * 100
+)
+
+kable(dashboard_matrix, col.names = c("Willett Sodium (mg)", "Estimated HF Risk (%)"), digits = 2, align = "cc") %>%
+  kable_styling(bootstrap_options = c("striped", "condensed"), full_width = F)
+```
