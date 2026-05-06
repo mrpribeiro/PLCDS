@@ -46,7 +46,7 @@ The project investigates whether energy-adjusted dietary sodium and protein inta
 ### Outcome
 | Variable | NHANES Code | Table | Description |
 |---|---|---|---|
-| `HF_Binary` | `MCQ160B` | MCQ | Self-reported congestive heart failure (0 = No, 1 = Yes) |
+| `HeartFailure` | `MCQ160B` | MCQ | Self-reported congestive heart failure (0 = No, 1 = Yes) |
 
 ### Primary Predictors
 | Variable | NHANES Code | Table | Description |
@@ -59,11 +59,11 @@ The project investigates whether energy-adjusted dietary sodium and protein inta
 | Variable | NHANES Code | Table | Description |
 |---|---|---|---|
 | `Age` | `RIDAGEYR` | DEMO | Age in years (continuous) |
-| `Gender_Clean` | `RIAGENDR` | DEMO | Sex (Male / Female) |
+| `Gender` | `RIAGENDR` | DEMO | Sex (Male / Female) |
 | `Poverty_Index_Ratio` | `INDFMPIR` | DEMO | Income-to-poverty ratio (continuous) |
-| `Education_Clean` | `DMDEDUC2` | DEMO | Education level (5-category factor) |
+| `Education` | `DMDEDUC2` | DEMO | Education level (5-category factor) |
 | `BMI` | `BMXBMI` | BMX | Body mass index (continuous) |
-| `Diabetes_Clean` | `DIQ010` | DIQ | Diabetes status (No / Pre-diabetes / Yes) |
+| `Diabetes` | `DIQ010` | DIQ | Diabetes status (No / Pre-diabetes / Yes) |
 | `Mean_Systolic` | `BPXSY1/2/3` | BPX | Mean of up to 3 systolic blood pressure readings (mmHg) |
 | `Medication_Use` | `RXDDRUG` | RXQ_RX | Antihypertensive or diuretic medication flag (Yes / No) |
 
@@ -181,9 +181,9 @@ All interactions with Large Language Models during this project are documented i
 
 | Name | Role |
 |---|---|
-| João Silva | Data Engineer — extraction, cleaning, dataset integration |
-| Marco Pereira | Statistical Analyst — survey design, modelling, diagnostics |
-| Mariana Ribeiro | Dashboard & Repository — Shiny UI, GitHub, documentation |
+| Marco Pereira | Data Engineer — extraction, cleaning, dataset integration |
+| Mariana Ribeiro | Statistical Analyst — survey design, modelling, diagnostics |
+| João Silva| Dashboard & Repository — Shiny UI, GitHub, documentation |
 
 *Doctoral Programme in Health Data Science (HEADS) — Faculty of Medicine, University of Porto (FMUP)*
 *Laboratory Project in Health Data Science — 2025/2026*
