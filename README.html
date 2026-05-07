@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>readme</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="README_files/libs/clipboard/clipboard.min.js"></script>
+<script src="README_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="README_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="README_files/libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="README_files/libs/quarto-html/popper.min.js"></script>
+<script src="README_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="README_files/libs/quarto-html/anchor.min.js"></script>
+<link href="README_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="README_files/libs/quarto-html/quarto-syntax-highlighting-ed96de9b727972fe78a7b5d16c58bf87.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="README_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="README_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="README_files/libs/bootstrap/bootstrap-9e3ffae467580fdb927a41352e75a2e0.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+
+
+
+<section id="heart-failure-risk-and-dietary-sodium-protein-intake" class="level1">
+<h1>Heart Failure Risk and Dietary Sodium &amp; Protein Intake</h1>
+<section id="laboratory-project-in-health-data-science-heads-doctoral-programme-fmup" class="level3">
+<h3 class="anchored" data-anchor-id="laboratory-project-in-health-data-science-heads-doctoral-programme-fmup">Laboratory Project in Health Data Science — HEADS Doctoral Programme, FMUP</h3>
+<hr>
+</section>
+<section id="research-question" class="level2">
+<h2 class="anchored" data-anchor-id="research-question">Research Question</h2>
+<blockquote class="blockquote">
+<p><strong>What is the association between estimated habitual sodium and protein intake and the prevalence of self-reported heart failure in the US adult population, adjusting for socioeconomic determinants and metabolic comorbidities?</strong></p>
+</blockquote>
+<p>The project investigates whether energy-adjusted dietary sodium and protein intake are independently associated with heart failure (HF) prevalence, after controlling for age, sex, income, education, BMI, diabetes, systolic blood pressure, and antihypertensive/diuretic medication use.</p>
+<hr>
+</section>
+<section id="data-source" class="level2">
+<h2 class="anchored" data-anchor-id="data-source">Data Source</h2>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Attribute</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Dataset</strong></td>
+<td>National Health and Nutrition Examination Survey (NHANES)</td>
+</tr>
+<tr class="even">
+<td><strong>Cycles</strong></td>
+<td>2011–2012 (G), 2013–2014 (H), 2015–2016 (I), 2017–2018 (J)</td>
+</tr>
+<tr class="odd">
+<td><strong>Source</strong></td>
+<td><a href="https://www.cdc.gov/nchs/nhanes/index.htm">CDC NHANES</a></td>
+</tr>
+<tr class="even">
+<td><strong>Access</strong></td>
+<td>Public domain — extracted via the <code>nhanesA</code> R package</td>
+</tr>
+<tr class="odd">
+<td><strong>Population</strong></td>
+<td>Non-institutionalised US adults aged ≥ 18 years</td>
+</tr>
+<tr class="even">
+<td><strong>Design</strong></td>
+<td>Complex stratified multi-stage probability sample</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+<section id="repository-structure" class="level2">
+<h2 class="anchored" data-anchor-id="repository-structure">Repository Structure</h2>
+<pre><code>├── data/
+│   ├── clean_dataset.rds          # Cleaned analytic dataset (generated by data_import chunk)
+│   ├── target_population.rds      # Pre-CCA dataset (used for attrition reporting)
+│   ├── final_model.rds            # Fitted svyglm model object (used by Shiny dashboard)
+│   └── dashboard_matrix.rds       # Predicted risk matrix (used by Shiny dashboard)
+│
+├── final_draft_report.Rmd         # Main analysis — reproducible R Markdown report
+├── app.R                          # Shiny interactive dashboard
+├── prompts.md                     # LLM interaction log with critical commentary
+└── README.md                      # This file</code></pre>
+<hr>
+</section>
+<section id="variables" class="level2">
+<h2 class="anchored" data-anchor-id="variables">Variables</h2>
+<section id="outcome" class="level3">
+<h3 class="anchored" data-anchor-id="outcome">Outcome</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Variable</th>
+<th>NHANES Code</th>
+<th>Table</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>HeartFailure</code></td>
+<td><code>MCQ160B</code></td>
+<td>MCQ</td>
+<td>Self-reported congestive heart failure (0 = No, 1 = Yes)</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="primary-predictors" class="level3">
+<h3 class="anchored" data-anchor-id="primary-predictors">Primary Predictors</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Variable</th>
+<th>NHANES Code</th>
+<th>Table</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>Sodium_Willett</code></td>
+<td><code>DR1TSODI</code></td>
+<td>DR1TOT</td>
+<td>Energy-adjusted sodium intake (Willett residual, mg)</td>
+</tr>
+<tr class="even">
+<td><code>Protein_Willett</code></td>
+<td><code>DR1TPROT</code></td>
+<td>DR1TOT</td>
+<td>Energy-adjusted protein intake (Willett residual, g)</td>
+</tr>
+<tr class="odd">
+<td><code>Protein_Origin</code></td>
+<td><code>DR1IFDCD</code> / <code>DR1IPROT</code></td>
+<td>DR1IFF</td>
+<td>Diet type: Mixed (ref), Animal (&gt;75%), Plant (&lt;30%)</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="covariates" class="level3">
+<h3 class="anchored" data-anchor-id="covariates">Covariates</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Variable</th>
+<th>NHANES Code</th>
+<th>Table</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>Age</code></td>
+<td><code>RIDAGEYR</code></td>
+<td>DEMO</td>
+<td>Age in years (continuous)</td>
+</tr>
+<tr class="even">
+<td><code>Gender</code></td>
+<td><code>RIAGENDR</code></td>
+<td>DEMO</td>
+<td>Sex (Male / Female)</td>
+</tr>
+<tr class="odd">
+<td><code>Poverty_Index_Ratio</code></td>
+<td><code>INDFMPIR</code></td>
+<td>DEMO</td>
+<td>Income-to-poverty ratio (continuous)</td>
+</tr>
+<tr class="even">
+<td><code>Education</code></td>
+<td><code>DMDEDUC2</code></td>
+<td>DEMO</td>
+<td>Education level (5-category factor)</td>
+</tr>
+<tr class="odd">
+<td><code>BMI</code></td>
+<td><code>BMXBMI</code></td>
+<td>BMX</td>
+<td>Body mass index (continuous)</td>
+</tr>
+<tr class="even">
+<td><code>Diabetes</code></td>
+<td><code>DIQ010</code></td>
+<td>DIQ</td>
+<td>Diabetes status (No / Pre-diabetes / Yes)</td>
+</tr>
+<tr class="odd">
+<td><code>Mean_Systolic</code></td>
+<td><code>BPXSY1/2/3</code></td>
+<td>BPX</td>
+<td>Mean of up to 3 systolic blood pressure readings (mmHg)</td>
+</tr>
+<tr class="even">
+<td><code>Medication_Use</code></td>
+<td><code>RXDDRUG</code></td>
+<td>RXQ_RX</td>
+<td>Antihypertensive or diuretic medication flag (Yes / No)</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="survey-design-variables" class="level3">
+<h3 class="anchored" data-anchor-id="survey-design-variables">Survey Design Variables</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Variable</th>
+<th>NHANES Code</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>Weight_MEC8</code></td>
+<td><code>WTMEC2YR / 4</code></td>
+<td>MEC examination weight adjusted for 4-cycle pooling</td>
+</tr>
+<tr class="even">
+<td><code>Strata</code></td>
+<td><code>SDMVSTRA</code></td>
+<td>Sampling stratum identifier</td>
+</tr>
+<tr class="odd">
+<td><code>PSU</code></td>
+<td><code>SDMVPSU</code></td>
+<td>Primary sampling unit identifier</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+</section>
+<section id="methods-summary" class="level2">
+<h2 class="anchored" data-anchor-id="methods-summary">Methods Summary</h2>
+<section id="energy-adjustment-willetts-residual-method" class="level3">
+<h3 class="anchored" data-anchor-id="energy-adjustment-willetts-residual-method">Energy Adjustment — Willett’s Residual Method</h3>
+<p>Sodium and protein intakes are adjusted for total energy intake to separate the effect of dietary composition from total food volume. Survey-weighted linear regression (<code>svyglm</code>) of each nutrient on total energy (<code>DR1TKCAL</code>) is fitted, and residuals are extracted and re-centred at the weighted population mean.</p>
+</section>
+<section id="statistical-model" class="level3">
+<h3 class="anchored" data-anchor-id="statistical-model">Statistical Model</h3>
+<p>A survey-weighted quasi-binomial logistic regression (<code>svyglm</code>, <code>quasibinomial</code> family) is fitted using the <code>survey</code> package, incorporating PSUs, strata, and adjusted sample weights. The quasi-binomial family is appropriate for complex survey binary outcomes as it handles overdispersion relative to standard binomial.</p>
+</section>
+<section id="multi-cycle-weight-adjustment" class="level3">
+<h3 class="anchored" data-anchor-id="multi-cycle-weight-adjustment">Multi-Cycle Weight Adjustment</h3>
+<p>Four 2-year NHANES cycles are pooled (2011–2018). Per CDC guidelines for multi-cycle pooling, <code>WTMEC2YR</code> is divided by 4 to produce <code>Weight_MEC8</code>, which represents the 8-year reference population.</p>
+</section>
+<section id="complete-case-analysis" class="level3">
+<h3 class="anchored" data-anchor-id="complete-case-analysis">Complete Case Analysis</h3>
+<p>Participants with missing values in any model covariate are excluded prior to survey design declaration. The number and proportion excluded are reported transparently in Section 2.1 of the report.</p>
+<hr>
+</section>
+</section>
+<section id="how-to-reproduce" class="level2">
+<h2 class="anchored" data-anchor-id="how-to-reproduce">How to Reproduce</h2>
+<section id="requirements" class="level3">
+<h3 class="anchored" data-anchor-id="requirements">Requirements</h3>
+<ul>
+<li>R ≥ 4.2.0</li>
+<li>Internet access (for the <code>data_import</code> chunk only — CDC NHANES API)</li>
+</ul>
+</section>
+<section id="r-packages" class="level3">
+<h3 class="anchored" data-anchor-id="r-packages">R Packages</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="fu">c</span>(</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">"haven"</span>, <span class="st">"nhanesA"</span>, <span class="st">"readr"</span>, <span class="st">"dplyr"</span>, <span class="st">"tidyr"</span>, <span class="st">"purrr"</span>,</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">"survey"</span>, <span class="st">"stringr"</span>, <span class="st">"tableone"</span>, <span class="st">"knitr"</span>, <span class="st">"kableExtra"</span>,</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">"ggplot2"</span>, <span class="st">"pROC"</span>, <span class="st">"car"</span>, <span class="st">"shiny"</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="step-by-step" class="level3">
+<h3 class="anchored" data-anchor-id="step-by-step">Step-by-step</h3>
+<p><strong>Step 1 — Generate the cleaned dataset</strong> (only needed once)</p>
+<p>Open <code>final_draft_report.Rmd</code> and set the <code>data_import</code> chunk option to <code>eval=TRUE</code>, then run that chunk. This will download data from the CDC NHANES API and write the following files to <code>data/</code>: - <code>clean_dataset.rds</code> - <code>target_population.rds</code></p>
+<p>Reset <code>eval=FALSE</code> after the files are saved.</p>
+<p><strong>Step 2 — Render the full report</strong></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>rmarkdown<span class="sc">::</span><span class="fu">render</span>(<span class="st">"final_draft_report.Rmd"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>This will produce <code>final_draft_report.pdf</code> and write <code>data/final_model.rds</code> and <code>data/dashboard_matrix.rds</code>.</p>
+<p><strong>Step 3 — Launch the Shiny dashboard</strong></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>shiny<span class="sc">::</span><span class="fu">runApp</span>(<span class="st">"app.R"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The dashboard reads <code>data/final_model.rds</code> and <code>data/dashboard_matrix.rds</code> — these must exist before launching (generated in Step 2).</p>
+<hr>
+</section>
+</section>
+<section id="key-results" class="level2">
+<h2 class="anchored" data-anchor-id="key-results">Key Results</h2>
+<p>Results are fully described in <code>final_draft_report.pdf</code>. In summary:</p>
+<ul>
+<li>Survey-weighted logistic regression models the adjusted association between energy-normalised sodium/protein intake and HF prevalence across the representative US adult population.</li>
+<li>Odds Ratios with 95% confidence intervals are reported for all predictors.</li>
+<li>Model discrimination is assessed via AUC (ROC curve).</li>
+<li>Multicollinearity is evaluated using Generalised Variance Inflation Factors (GVIF).</li>
+<li>A predicted risk curve across the P5–P95 range of Willett-adjusted sodium intake is provided for a reference patient profile.</li>
+</ul>
+<hr>
+</section>
+<section id="limitations" class="level2">
+<h2 class="anchored" data-anchor-id="limitations">Limitations</h2>
+<ol type="1">
+<li><strong>Cross-sectional design</strong> — causality cannot be inferred; reverse causation is plausible (HF patients may modify their diet after diagnosis).</li>
+<li><strong>Self-reported outcome</strong> — HF diagnosis relies on participant self-report (<code>MCQ160B</code>); no biomarker or imaging confirmation is available in NHANES.</li>
+<li><strong>Single 24-hour dietary recall</strong> — may not reflect habitual intake; Willett’s method partially mitigates within-person variability.</li>
+<li><strong>Complete case analysis</strong> — missingness correlates with socioeconomic status; the analytic sample may over-represent higher-income adults.</li>
+<li><strong>Protein origin classification</strong> — based on the first digit of USDA FNDDS food codes, which is a coarse approximation for mixed or processed foods.</li>
+<li><strong>Medication variable scope</strong> — antihypertensive/diuretic flag is based on active ingredient name matching; trade names not in the lookup list may be missed.</li>
+</ol>
+<hr>
+</section>
+<section id="llm-usage" class="level2">
+<h2 class="anchored" data-anchor-id="llm-usage">LLM Usage</h2>
+<p>All interactions with Large Language Models during this project are documented in <code>prompts.md</code>, including prompts used, model responses, and critical commentary by the group. The LLM was used to support research question formulation, variable planning, and methodological discussion — not to perform the analysis.</p>
+<hr>
+</section>
+<section id="references" class="level2">
+<h2 class="anchored" data-anchor-id="references">References</h2>
+<ul>
+<li>Centers for Disease Control and Prevention. <em>NHANES — National Health and Nutrition Examination Survey</em>. https://www.cdc.gov/nchs/nhanes/</li>
+<li>Willett W, Stampfer MJ. <em>Total energy intake: implications for epidemiologic analyses.</em> Am J Epidemiol. 1986;124(1):17–27.</li>
+<li>Lumley T. <em>Complex Surveys: A Guide to Analysis Using R.</em> Wiley, 2010.</li>
+<li>Fox J, Monette G. <em>Generalized Collinearity Diagnostics.</em> JASA. 1992;87(417):178–183.</li>
+<li>Perraud et al.&nbsp;<em>Dietary protein sources and cardiovascular risk.</em> Front Nutr. 2023. DOI: 10.3389/fnut.2023.1178121</li>
+<li>Tsao CW et al.&nbsp;<em>Association Between Life’s Essential 8 Scores and Heart Failure: Insights From NHANES (2007–2020).</em> JACC Heart Fail. 2024.</li>
+</ul>
+<hr>
+</section>
+<section id="authors" class="level2">
+<h2 class="anchored" data-anchor-id="authors">Authors</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Marco Pereira</td>
+<td>Data Engineer — extraction, cleaning, dataset integration</td>
+</tr>
+<tr class="even">
+<td>Mariana Ribeiro</td>
+<td>Statistical Analyst — survey design, modelling, diagnostics</td>
+</tr>
+<tr class="odd">
+<td>João Silva</td>
+<td>Dashboard &amp; Repository — Shiny UI, GitHub, documentation</td>
+</tr>
+</tbody>
+</table>
+<p><em>Doctoral Programme in Health Data Science (HEADS) — Faculty of Medicine, University of Porto (FMUP)</em> <em>Laboratory Project in Health Data Science — 2025/2026</em></p>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
