@@ -119,17 +119,18 @@ get_clinical_data <- function(suffix) {
       .groups = "drop"
     )
   
-  # --- Medication --- TO BE CHANGED
-  hf_icd_codes <- c("I50", "I50.9", "I50.1", "I50.2", "I50.3", "I50.4", "I50.9P")
-  
+  # --- Medication
+  hf_med_codes <- c("d00013", "d00732", "d00728", "d03744", "d03847", "d05265", "d00134", "d04322", "d03821", "d04113", "d00070", "d00373", "d04815", "d04440", "d00006", "d04008", "d04364", "d07928", "d08275", "d08369", "d03189", "d00179", "d00210", "d05706",  "d00132", "d00268")
+  # # Enalapril, Ramipril, Lisinopril, Perindopril, Captopril, Trandolapril (ACEI),Bisoprolol, Carvedilol, Metoprolol, Nebivolol (BB), Candesartan, Valsartan, Losartan, Telmisartan (ARB), Spironolactone, Eplerenone (MRA), Dapagliflozin, Empagliflozin (SGLT2i), Sacubitril/Valsartan (ARNI), Furosemide, Torsemide, Bumetanide (Loop Diuretics), Digoxin, Ivabradine, Vericiguat (Other HF Therapies)
+
   med_clean <- med %>%
-        rename_with(toupper) %>% group_by(SEQN) %>%
+        rename_with(toupper) %>% 
+        group_by(SEQN) %>%
         summarise(
-                  HF_Medication = as.factor(any(
-                        if_any(any_of(c("RXDRSC1", "RXDRSC2", "RXDRSC3")),
-                        ~ trimws(.x) %in% hf_icd_codes), na.rm = TRUE)),
+                  HF_Medication = any(trimws(RXDDRGID) %in% hf_med_codes, na.rm = TRUE),
                   .groups = "drop"
-  )
+  ) %>%
+  mutate(HF_Medication = factor(HF_Medication, levels = c(1, 0), labels = c("Yes", "No")))
  
   # --- Merge all tables on SEQN ---
   tabular_data_NHANES <- d_clean %>%
