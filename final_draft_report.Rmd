@@ -456,11 +456,11 @@ plot(roc_obj,
 # correspond to VIF > 5; values > 3.16 correspond to VIF > 10.
 # Reference: Fox & Monette (1992), JASA.
 
-# Covert HeartFailure variable to numeric for lm() approximation
-analysis_data$HeartFailure <- as.numeric(analysis_data$HeartFailure) - 1
+# Convert HeartFailure variable to numeric for lm() approximation
+analysis_data$HF <- as.numeric(analysis_data$HeartFailure) - 1
 
 vif_model <- lm(
-  HeartFailure ~ Sodium_mg + Protein_g + Protein_Origin +
+  HF ~ Sodium_mg + Protein_g + Protein_Origin +
     Age + Gender + Poverty_Index_Ratio + Education +
     BMI + Diabetes + Mean_Systolic + Medication_Use,
   data = analysis_data

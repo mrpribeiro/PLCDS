@@ -110,11 +110,11 @@ server <- function(input, output, session) {
         })
         
         output$pct_sodium_txt <- renderText({
-                paste0(round(pct_sodium(), 1), "percentile")
+                paste0(round(pct_sodium(), 1), "th percentile")
         })
         
         output$pct_prot_txt <- renderText({
-                paste0(round(pct_prot(), 1), "percentile")
+                paste0(round(pct_prot(), 1), "th percentile")
         })
         
         # 3) Visualizations
