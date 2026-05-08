@@ -8,13 +8,14 @@ output: pdf_document
 
 # Abstract
 
-This study examines the association between habitual dietary sodium and protein intake and the self-reported prevalence of heart failure (HF) in the US adult population, adjusting for socioeconomic determinants and metabolic comorbidities. Data from four combined cycles of the National Health and Nutrition Examination Survey (NHANES 2011–2018) were analysed using complex survey-weighted logistic regression. Nutritional exposures were energy-adjusted using Willett's residual method. The sample includes adults aged 18 and older with complete covariate data. Results are reported as weighted Odds Ratios (OR) with 95% confidence intervals, representative of the non-institutionalised US adult population.
+This study examines the association between habitual dietary sodium and protein intake and the self-reported prevalence of heart failure (HF) in the US adult population, adjusting for socioeconomic determinants and metabolic comorbidities. Data from four combined cycles of the National Health and Nutrition Examination Survey (NHANES 2011–2018) were analysed using complex survey-weighted logistic regression. The sample includes adults aged 18 and older with complete covariate data. Results are reported as weighted Odds Ratios (OR) with 95% confidence intervals, representative of the non-institutionalised US adult population.
 
 # 1. Preparation and Package Loading
 
 In this section, we load the necessary libraries for API extraction, data manipulation (`dplyr`, `purrr`), complex survey analysis (`survey`), descriptive statistics (`tableone`), model diagnostics (`pROC`, `car`), and visualisation (`ggplot2`). We also include `knitr` and `kableExtra` for rendering elegant tables in the final output.
 
 ```{r packages, echo=TRUE}
+# Install packages if not already installed
 if(!require(dplyr)) install.packages("dplyr")
 if(!require(survey)) install.packages("survey")
 if(!require(tableone)) install.packages("tableone")
@@ -27,9 +28,9 @@ if(!require(tidyr)) install.packages("tidyr")
 if(!require(ggplot2)) install.packages("ggplot2")
 if(!require(pROC)) install.packages("pROC")
 if(!require(car)) install.packages("car")
-if(!require(stringr)) install.packages("stringr")
 if(!require(readr)) install.packages("readr")
-
+if(!require(stringr)) install.packages("stringr")
+# Load libraries
 library(haven)
 library(nhanesA)
 library(readr)
@@ -232,7 +233,7 @@ The dependent variable (Heart Failure) is converted into a strictly binary forma
 analysis_data <- df_clean %>%
   mutate(
     # Outcome variable (binary)
-    HeartFailure = ifelse(HeartFailure == "Yes", 1, 0),
+    HeartFailure = factor(HeartFailure, levels = c("No", "Yes")),
 
     # Survey weights adjusted for 4-cycle pooling (8 years total)
     Weight_MEC8 = Weight_MEC / 4,
@@ -274,38 +275,6 @@ analysis_data <- df_clean %>%
 
 ```
 
-## 3.2 Willett's Residual Method (Survey-Weighted)
-
-To mitigate "volume bias", we adjust sodium and protein intakes for total energy intake. The goal is to identify individuals consuming a *disproportionately* high amount of sodium relative to their caloric needs, rather than penalising those with naturally high energy requirements (e.g., physically active individuals).
-
-The residual regressions are fitted using `svyglm` to respect the complex survey design. This ensures the energy–nutrient relationship is estimated at the population level, not merely the sample level. The population mean is added back to residuals to preserve interpretability on the original measurement scale.
-
-```{r willett}
-# Temporary survey design object for weighted residual regression
-nhanes_design_willett <- svydesign(
-  id      = ~PSU,
-  strata  = ~Strata,
-  weights = ~Weight_MEC8,
-  nest    = TRUE,
-  data    = analysis_data
-)
-
-# Survey-weighted linear models for Willett residuals
-model_sodium_svy <- svyglm(Sodium_mg ~ Energy_kcal, design = nhanes_design_willett)
-model_prot_svy   <- svyglm(Protein_g ~ Energy_kcal, design = nhanes_design_willett)
-
-# Population means (weighted) for re-centering residuals
-mean_sodium_wtd <- coef(svymean(~Sodium_mg, nhanes_design_willett))
-mean_prot_wtd   <- coef(svymean(~Protein_g, nhanes_design_willett))
-
-# Append Willett-adjusted variables
-analysis_data <- analysis_data %>%
-  mutate(
-    Sodium_Willett  = residuals(model_sodium_svy) + mean_sodium_wtd,
-    Protein_Willett = residuals(model_prot_svy)   + mean_prot_wtd
-  )
-```
-
 # 4. Weighted Analysis (Survey Design)
 
 The `survey` package declares Primary Sampling Units (PSUs), strata, and sample weights. This overrides standard assumptions of equal-probability sampling, ensuring all inferences reflect the non-institutionalised US adult population.
@@ -325,7 +294,7 @@ nhanes_design <- svydesign(
 Distribution of population characteristics stratified by heart failure status, adjusted to NHANES survey weights. P-values are computed using survey-appropriate tests (`svyttest` for continuous variables, `svychisq` for categorical variables)
 
 ```{r table_1}
-vars_table <- c("Sodium_Willett", "Protein_Willett", "Protein_Origin",
+vars_table <- c("Sodium_mg", "Protein_g", "Protein_Origin",
                 "Age", "Gender", "Poverty_Index_Ratio",
                 "Education", "BMI", "Diabetes",
                 "Mean_Systolic", "Medication_Use")
@@ -341,7 +310,7 @@ table_1_weighted <- svyCreateTableOne(
   test       = TRUE   # survey-appropriate tests (svyttest / svychisq)
 )
 
-kableone(
+tab1_kable <- kableone(
   table_1_weighted,
   showAllLevels  = TRUE,
   formatOptions  = list(big.mark = ","),
@@ -350,9 +319,10 @@ kableone(
   kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
                 full_width = FALSE) %>%
   footnote(
-    general = "HF = Heart Failure; PIR = Poverty-Income Ratio; BMI = Body Mass Index. Sodium and Protein are energy-adjusted Willett residuals. Medication_Use flags antihypertensive or diuretic therapy.",
+    general = "HF = Heart Failure; PIR = Poverty-Income Ratio; BMI = Body Mass Index. Medication_Use flags antihypertensive or diuretic therapy.",
     general_title = "Note: "
   )
+tab1_kable
 ```
 
 # 5. Logistic Model Results
@@ -361,7 +331,7 @@ A quasi-binomial model, appropriate for complex survey-weighted data with a bina
 
 ```{r model}
 final_model <- svyglm(
-  HeartFailure ~ Sodium_Willett + Protein_Willett + Protein_Origin +
+  HeartFailure ~ Sodium_mg + Protein_g + Protein_Origin +
     Age + Gender + Poverty_Index_Ratio + Education +
     BMI + Diabetes + Mean_Systolic + Medication_Use,
   design = nhanes_design,
@@ -382,8 +352,8 @@ table_OR <- data.frame(
 table_OR <- table_OR %>%
   mutate(Variable = case_when(
     Variable == "(Intercept)"                        ~ "Intercept",
-    Variable == "Sodium_Willett"                     ~ "Sodium: energy-adjusted (mg)",
-    Variable == "Protein_Willett"                    ~ "Protein: energy-adjusted (g)",
+    Variable == "Sodium_mg"                     ~ "Sodium (mg)",
+    Variable == "Protein_g"                    ~ "Protein (g)",
     Variable == "Protein_OriginAnimal"               ~ "Animal protein (Ref: Mixed)",
     Variable == "Protein_OriginPlant"                ~ "Plant protein (Ref: Mixed)",
     Variable == "Age"                                ~ "Age (years)",
@@ -409,7 +379,7 @@ kable(
 ) %>%
   kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE) %>%
   footnote(
-    general       = "OR = Odds Ratio; CI = Confidence Interval. Education reference: < 9th grade. Sodium and Protein are Willett energy-adjusted residuals.",
+    general       = "OR = Odds Ratio; CI = Confidence Interval. Education reference: < 9th grade.",
     general_title = "Note: "
   )
 ```
@@ -486,8 +456,11 @@ plot(roc_obj,
 # correspond to VIF > 5; values > 3.16 correspond to VIF > 10.
 # Reference: Fox & Monette (1992), JASA.
 
+# Convert HeartFailure variable to numeric for lm() approximation
+analysis_data$HF <- as.numeric(analysis_data$HeartFailure) - 1
+
 vif_model <- lm(
-  HeartFailure ~ Sodium_Willett + Protein_Willett + Protein_Origin +
+  HF ~ Sodium_mg + Protein_g + Protein_Origin +
     Age + Gender + Poverty_Index_Ratio + Education +
     BMI + Diabetes + Mean_Systolic + Medication_Use,
   data = analysis_data
@@ -565,7 +538,7 @@ The following limitations should be disclosed in the final presentation and any 
 
 2.  **Self-reported heart failure:** The outcome (`MCQ160B`) relies on self-reported diagnosis of congestive HF. Misclassification bias is possible. The absence of biomarkers (BNP, troponin) or echocardiography precludes clinical confirmation, though this approach is standard in NHANES-based HF research.
 
-3.  **Single 24-hour dietary recall:** Dietary intake is assessed via a single-day recall, which may not reflect habitual intake. Willett's residual method partially mitigates within-person variability but does not eliminate it.
+3.  **Single 24-hour dietary recall:** Dietary intake is assessed via a single-day recall, which may not reflect habitual intake.
 
 4.  **Complete Case Analysis:** Participants with missing data were excluded. Given that missingness correlates with socioeconomic status, the analytic sample may over-represent higher-income adults, limiting generalisability to marginalised populations.
 
@@ -573,107 +546,18 @@ The following limitations should be disclosed in the final presentation and any 
 
 6.  **Medication variable scope:** The antihypertensive/diuretic flag is based on active ingredient name matching in `RXDDRUG`. Trade names and combination products not included in the keyword list may result in some participants being incorrectly classified as unexposed.
 
-# 8. Exported Data for Dashboard (Graphical Interface)
+# 8. Exported Data for Dashboard
 
-The following matrices serve as baselines for the interactive Shiny dashboard.
-
-## 8.1 Population Percentiles (Relative Comparison)
-
-Survey-weighted percentiles of raw sodium and protein intake, used to contextualise user inputs against the representative US population.
-
-```{r percentile}
-nutrition_percentiles <- svyquantile(
-  ~Sodium_mg + Protein_g,
-  design    = nhanes_design,
-  quantiles = c(0.05, 0.25, 0.50, 0.75, 0.90, 0.95),
-  na.rm     = TRUE
+```{r shinyapp, eval=FALSE}
+# eval=FALSE to prevent overwriting the bundle on every knit. Run this chunk once interactively after confirming all variables are correct.
+# Create a list of all variables for potential use in the Shiny dashboard
+bundle <- list(
+  final_model       = final_model,
+  ref_sodium_mg = analysis_data$Sodium_mg,
+  ref_protein_g = analysis_data$Protein_g,
+  tab1_html = as.character(tab1_kable)
 )
 
-table_percentiles <- as.data.frame(
-  do.call(rbind, lapply(nutrition_percentiles, function(x) x[, 1]))
-)
-colnames(table_percentiles)  <- c("P5", "P25", "P50", "P75", "P90", "P95")
-rownames(table_percentiles)  <- c("Sodium (mg)", "Protein (g)")
-
-kable(table_percentiles, digits = 1, align = "c",
-      caption = "Table 4. Survey-weighted population percentiles for sodium and protein intake (NHANES 2011–2018 adults). Used as reference distribution in the Shiny dashboard.") %>%
-  kable_styling(bootstrap_options = c("striped", "condensed", "hover"),
-                full_width = FALSE)
-```
-
-## 8.2 Predicted Risk Curve Matrix
-
-Predicted HF probability for a reference patient profile across the observed range of Willett-adjusted sodium intake (P5–P95). The sodium range is derived from the data rather than fixed values, ensuring the curve covers clinically meaningful variation.
-
-```{r risk_curve, fig.width=6.5, fig.height=4.5, fig.cap="Figure 3. Predicted probability of heart failure as a function of energy-adjusted sodium intake (Willett residual). Reference profile: Male, age 50, BMI 28, mean protein intake, PIR 2.0, high school education, no diabetes, mean systolic blood pressure, no antihypertensive medication. Shaded band = 95% CI."}
-
-# --- Robust svyquantile scalar extraction ---
-# svyquantile can return a named vector, a matrix, or a list depending on the
-# survey package version. Using [[1]][1] guarantees a length-1 numeric scalar
-# regardless of the return structure.
-extract_scalar_quantile <- function(formula, design, prob) {
-  q <- svyquantile(formula, design = design, quantiles = prob, na.rm = TRUE)
-  as.numeric(q[[1]])[1]
-}
-
-sodium_p5  <- extract_scalar_quantile(~Sodium_Willett, nhanes_design, 0.05)
-sodium_p95 <- extract_scalar_quantile(~Sodium_Willett, nhanes_design, 0.95)
-
-sodium_scenarios <- data.frame(
-  Sodium_Willett      = seq(sodium_p5, sodium_p95, length.out = 50),
-  Protein_Willett     = mean(analysis_data$Protein_Willett, na.rm = TRUE),
-  Protein_Origin      = factor("Mixed", levels = c("Mixed", "Animal", "Plant")),
-  Age                 = 50,
-  Gender              = factor("Male", levels = c("Male", "Female")),
-  Poverty_Index_Ratio = 2.0,
-  Education    = factor("High School Graduate",
-                               levels = levels(analysis_data$Education)),
-  BMI                 = 28,
-  Diabetes            = factor("No", levels = c("No", "Pre-diabetes", "Yes")),
-  Mean_Systolic       = mean(analysis_data$Mean_Systolic, na.rm = TRUE),
-  Medication_Use      = factor("No", levels = c("No", "Yes"))
-)
-
-# Predicted probabilities — svyglm predict() returns an svystat object,
-# NOT a list. Fitted values are the object itself; variances are in attr(...,"var").
-pred_link <- predict(final_model, newdata = sodium_scenarios, type = "link", se = TRUE)
-
-# Back-transform from log-odds to probability
-inv_logit <- function(x) exp(x) / (1 + exp(x))
-
-pred_prob <- inv_logit(as.numeric(pred_link))
-pred_se   <- as.numeric(sqrt(diag(attr(pred_link, "var"))))  # SE on the link scale
-
-# CI on link scale first, then back-transform (avoids probabilities outside [0,1])
-ci_lower <- inv_logit(as.numeric(pred_link) - 1.96 * pred_se)
-ci_upper <- inv_logit(as.numeric(pred_link) + 1.96 * pred_se)
-
-dashboard_matrix <- data.frame(
-  Sodium_Willett_mg     = round(sodium_scenarios$Sodium_Willett, 0),
-  Estimated_HF_Risk_Pct = round(pred_prob * 100, 2),
-  CI_Lower_Pct          = round(ci_lower  * 100, 2),
-  CI_Upper_Pct          = round(ci_upper  * 100, 2)
-)
-
-# Plot the risk curve
-ggplot(dashboard_matrix, aes(x = Sodium_Willett_mg, y = Estimated_HF_Risk_Pct)) +
-  geom_ribbon(aes(ymin = CI_Lower_Pct, ymax = CI_Upper_Pct),
-              fill = "#2166AC", alpha = 0.15) +
-  geom_line(colour = "#2166AC", linewidth = 1) +
-  labs(
-    x = "Energy-adjusted sodium intake — Willett residual (mg)",
-    y = "Estimated HF probability (%)"
-  ) +
-  theme_minimal(base_size = 10)
-
-# Table export for Shiny (first 10 rows shown)
-kable(head(dashboard_matrix, 10),
-      col.names = c("Willett sodium (mg)", "HF risk (%)", "CI lower (%)", "CI upper (%)"),
-      digits    = 2, align = "cccc",
-      caption   = "Table 5. Predicted HF risk matrix (first 10 rows). Full matrix exported as dashboard_matrix for Shiny integration.") %>%
-  kable_styling(bootstrap_options = c("striped", "condensed"), full_width = FALSE)
-
-# Export full matrix and model for Shiny dashboard
-saveRDS(dashboard_matrix, file = "data/dashboard_matrix.rds")
-saveRDS(final_model,      file = "data/final_model.rds")
+# Export list for Shiny dashboard
+saveRDS(bundle, file = "hf-risk-nhanes/shiny_bundle.rds")
 ```
