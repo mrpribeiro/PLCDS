@@ -47,14 +47,14 @@ ui <- fluidPage(
                                 column(
                                         width = 4,
                                         wellPanel(
-                                                h4("Sodium percentile (EUA)"),
+                                                h4("Sodium percentile (USA)"),
                                                 textOutput("pct_sodium_txt")
                                         )
                                 ),
                                 column(
                                         width = 4,
                                         wellPanel(
-                                                h4("Protein percentile (EUA)"),
+                                                h4("Protein percentile (USA)"),
                                                 textOutput("pct_prot_txt")
                                         )
                                 )
@@ -110,11 +110,11 @@ server <- function(input, output, session) {
         })
         
         output$pct_sodium_txt <- renderText({
-                paste0(round(pct_sodium(), 1), "º percentile")
+                paste0(round(pct_sodium(), 1), "percentile")
         })
         
         output$pct_prot_txt <- renderText({
-                paste0(round(pct_prot(), 1), "º percentile")
+                paste0(round(pct_prot(), 1), "percentile")
         })
         
         # 3) Visualizations
@@ -171,14 +171,14 @@ server <- function(input, output, session) {
                 })
                 output$plot_percentiles <- renderPlot({
                         df <- data.frame(
-                                variavel = c("Sodium (mg/day)", "Protein (g/day)"),
+                                variable = c("Sodium (mg/day)", "Protein (g/day)"),
                                 percentile = c(pct_sodium(), pct_prot())
                         )
                         
-                        ggplot(df, aes(x = percentile, y = variavel)) +
+                        ggplot(df, aes(x = percentile, y = variable)) +
                                 geom_col(width = 0.6) +
                                 scale_x_continuous(limits = c(0, 100), breaks = seq(0, 100, 20)) +
-                                labs(x = "Percentile (0–100)", y = NULL, title = "Position relative to the reference population (EUA)") +
+                                labs(x = "Percentile (0–100)", y = NULL, title = "Position relative to the reference population (USA)") +
                                 theme_minimal()
                 })
                 

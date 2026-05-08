@@ -351,8 +351,8 @@ table_OR <- data.frame(
 table_OR <- table_OR %>%
   mutate(Variable = case_when(
     Variable == "(Intercept)"                        ~ "Intercept",
-    Variable == "Sodium_mg"                     ~ "Sodium: energy-adjusted (mg)",
-    Variable == "Protein_g"                    ~ "Protein: energy-adjusted (g)",
+    Variable == "Sodium_mg"                     ~ "Sodium (mg)",
+    Variable == "Protein_g"                    ~ "Protein (g)",
     Variable == "Protein_OriginAnimal"               ~ "Animal protein (Ref: Mixed)",
     Variable == "Protein_OriginPlant"                ~ "Plant protein (Ref: Mixed)",
     Variable == "Age"                                ~ "Age (years)",
@@ -455,6 +455,9 @@ plot(roc_obj,
 # correspond to VIF > 5; values > 3.16 correspond to VIF > 10.
 # Reference: Fox & Monette (1992), JASA.
 
+# Covert HeartFailure variable to numeric for lm() approximation
+analysis_data$HeartFailure <- as.numeric(analysis_data$HeartFailure) - 1
+
 vif_model <- lm(
   HeartFailure ~ Sodium_mg + Protein_g + Protein_Origin +
     Age + Gender + Poverty_Index_Ratio + Education +
@@ -544,7 +547,8 @@ The following limitations should be disclosed in the final presentation and any 
 
 # 8. Exported Data for Dashboard
 
-```{r shinyapp}
+```{r shinyapp, eval=FALSE}
+# eval=FALSE to prevent overwriting the bundle on every knit. Run this chunk once interactively after confirming all variables are correct.
 # Create a list of all variables for potential use in the Shiny dashboard
 bundle <- list(
   final_model       = final_model,
