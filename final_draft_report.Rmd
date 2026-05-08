@@ -335,15 +335,29 @@ final_model <- svyglm(
   family = quasibinomial()
 )
 
+# Extract the model summary to obtain the p-values
+model_summary <- summary(final_model)$coefficients
+
 # Odds Ratios and 95% Confidence Intervals
 table_OR <- data.frame(
   Variable = names(coef(final_model)),
   OR       = exp(coef(final_model)),
   CI_2.5   = exp(confint(final_model))[, 1],
   CI_97.5  = exp(confint(final_model))[, 2],
+  P_Value   = model_summary[, 4],
   row.names = NULL
 ) %>%
-  mutate(across(where(is.numeric), ~ round(.x, 3)))
+  mutate(
+    # Format the P-value clinically (values below 0.05 become "< 0.05", otherwise show the number)
+    P_Value_Str = case_when(
+      P_Value < 0.05 ~ "< 0.05",
+      TRUE ~ as.character(round(P_Value, 3))
+    )
+  ) %>%
+  # Round only the OR and CI columns to 3 decimal places
+  mutate(across(c(OR, CI_2.5, CI_97.5), ~ round(.x, 3))) %>%
+  # Reorganise the columns and drop the raw numeric P_Value (keeping only the formatted one)
+  select(Variable, OR, CI_2.5, CI_97.5, P_Value = P_Value_Str)
 
 # Human-readable variable labels
 table_OR <- table_OR %>%
@@ -370,13 +384,13 @@ table_OR <- table_OR %>%
 
 kable(
   table_OR,
-  col.names = c("Variable", "Odds Ratio", "95% CI (Lower)", "95% CI (Upper)"),
+  col.names = c("Variable", "Odds Ratio", "95% CI (Lower)", "95% CI (Upper)", "p-value"),
   align     = "lccc",
   caption   = "Table 2. Adjusted Odds Ratios for heart failure from survey-weighted quasi-binomial logistic regression. Reference categories in parentheses. NHANES 2011–2018."
 ) %>%
   kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE) %>%
   footnote(
-    general       = "OR = Odds Ratio; CI = Confidence Interval. Education reference: < 9th grade.",
+    general       = "OR = Odds Ratio; CI = Confidence Interval. Education reference: < 9th grade. p-values < 0.05 indicate statistical significance.",
     general_title = "Note: "
   )
 ```
