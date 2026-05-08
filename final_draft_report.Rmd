@@ -14,7 +14,7 @@ This study examines the association between habitual dietary sodium and protein 
 
 In this section, we load the necessary libraries for API extraction, data manipulation (`dplyr`, `purrr`), complex survey analysis (`survey`), descriptive statistics (`tableone`), model diagnostics (`pROC`, `car`), and visualisation (`ggplot2`). We also include `knitr` and `kableExtra` for rendering elegant tables in the final output.
 
-```{r packages, echo=TRUE}
+```{r packages_required, echo=TRUE}
 # Install packages if not already installed
 if(!require(dplyr)) install.packages("dplyr")
 if(!require(survey)) install.packages("survey")
@@ -30,6 +30,9 @@ if(!require(pROC)) install.packages("pROC")
 if(!require(car)) install.packages("car")
 if(!require(readr)) install.packages("readr")
 if(!require(stringr)) install.packages("stringr")
+```
+
+```{r packages_load, echo=TRUE}
 # Load libraries
 library(haven)
 library(nhanesA)
@@ -127,10 +130,10 @@ get_clinical_data <- function(suffix) {
         rename_with(toupper) %>% 
         group_by(SEQN) %>%
         summarise(
-                  HF_Medication = any(trimws(RXDDRGID) %in% hf_med_codes, na.rm = TRUE),
+                  Medication_Use = any(trimws(RXDDRGID) %in% hf_med_codes, na.rm = TRUE),
                   .groups = "drop"
   ) %>%
-  mutate(HF_Medication = factor(HF_Medication, levels = c(1, 0), labels = c("Yes", "No")))
+  mutate(Medication_Use = factor(Medication_Use, levels = c(1, 0), labels = c("Yes", "No")))
  
   # --- Merge all tables on SEQN ---
   tabular_data_NHANES <- d_clean %>%
@@ -256,12 +259,6 @@ analysis_data <- df_clean %>%
       Diabetes == "Borderline" ~ "Pre-diabetes",
       Diabetes == "Yes"        ~ "Yes"
     ), levels = c("No", "Pre-diabetes", "Yes")),
-
-    # Medication use: antihypertensive / diuretic flag
-    Medication_Use = factor(
-      ifelse(HF_Medication == TRUE, "Yes", "No"),
-      levels = c("No", "Yes")
-    ),
 
     # Protein origin ratio and categorical diet type
     Animal_Ratio = Total_Animal_Protein_g / Protein_g,
