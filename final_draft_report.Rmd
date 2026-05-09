@@ -559,14 +559,35 @@ The following limitations should be disclosed in the final presentation and any 
 
 # 8. Exported Data for Dashboard
 
+```{r}
+# -----------------------------------------------------------------------------
+# POPULATION ADJUSTMENT
+# -----------------------------------------------------------------------------
+set.seed(123) # Ensure reproducibility
+
+# Create a representative sample of 10,000 points based on NHANES survey weights
+pop_sodium_usa <- sample(
+  x = analysis_data$Sodium_mg[!is.na(analysis_data$Sodium_mg)], 
+  size = 10000, 
+  replace = TRUE, 
+  prob = analysis_data$Weight_MEC8[!is.na(analysis_data$Sodium_mg)]
+)
+
+pop_protein_usa <- sample(
+  x = analysis_data$Protein_g[!is.na(analysis_data$Protein_g)], 
+  size = 10000, 
+  replace = TRUE, 
+  prob = analysis_data$Weight_MEC8[!is.na(analysis_data$Protein_g)]
+)
+```
+
 ```{r shinyapp, eval=FALSE}
 # eval=FALSE to prevent overwriting the bundle on every knit. Run this chunk once interactively after confirming all variables are correct.
 # Create a list of all variables for potential use in the Shiny dashboard
 bundle <- list(
   final_model       = final_model,
-  ref_sodium_mg = analysis_data$Sodium_mg,
-  ref_protein_g = analysis_data$Protein_g,
-  ref_weights   = analysis_data$Weight_MEC8,
+  ref_sodium_mg = pop_sodium_usa,
+  ref_protein_g = pop_protein_usa,
   tab1_html = as.character(tab1_kable)
 )
 
