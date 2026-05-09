@@ -14,7 +14,7 @@ This study examines the association between habitual dietary sodium and protein 
 
 In this section, we load the necessary libraries for API extraction, data manipulation (`dplyr`, `purrr`), complex survey analysis (`survey`), descriptive statistics (`tableone`), model diagnostics (`pROC`, `car`), and visualisation (`ggplot2`). We also include `knitr` and `kableExtra` for rendering elegant tables in the final output.
 
-```{r packages, echo=TRUE}
+```{r packages_required, echo=TRUE}
 # Install packages if not already installed
 if(!require(dplyr)) install.packages("dplyr")
 if(!require(survey)) install.packages("survey")
@@ -30,6 +30,9 @@ if(!require(pROC)) install.packages("pROC")
 if(!require(car)) install.packages("car")
 if(!require(readr)) install.packages("readr")
 if(!require(stringr)) install.packages("stringr")
+```
+
+```{r packages_load, echo=TRUE}
 # Load libraries
 library(haven)
 library(nhanesA)
@@ -127,10 +130,10 @@ get_clinical_data <- function(suffix) {
         rename_with(toupper) %>% 
         group_by(SEQN) %>%
         summarise(
-                  HF_Medication = any(trimws(RXDDRGID) %in% hf_med_codes, na.rm = TRUE),
+                  Medication_Use = any(trimws(RXDDRGID) %in% hf_med_codes, na.rm = TRUE),
                   .groups = "drop"
   ) %>%
-  mutate(HF_Medication = factor(HF_Medication, levels = c(1, 0), labels = c("Yes", "No")))
+  mutate(Medication_Use = factor(Medication_Use, levels = c(1, 0), labels = c("Yes", "No")))
  
   # --- Merge all tables on SEQN ---
   tabular_data_NHANES <- d_clean %>%
@@ -257,12 +260,6 @@ analysis_data <- df_clean %>%
       Diabetes == "Yes"        ~ "Yes"
     ), levels = c("No", "Pre-diabetes", "Yes")),
 
-    # Medication use: antihypertensive / diuretic flag
-    Medication_Use = factor(
-      ifelse(HF_Medication == TRUE, "Yes", "No"),
-      levels = c("No", "Yes")
-    ),
-
     # Protein origin ratio and categorical diet type
     Animal_Ratio = Total_Animal_Protein_g / Protein_g,
     Protein_Origin = factor(case_when(
@@ -338,15 +335,29 @@ final_model <- svyglm(
   family = quasibinomial()
 )
 
+# Extract the model summary to obtain the p-values
+model_summary <- summary(final_model)$coefficients
+
 # Odds Ratios and 95% Confidence Intervals
 table_OR <- data.frame(
   Variable = names(coef(final_model)),
   OR       = exp(coef(final_model)),
   CI_2.5   = exp(confint(final_model))[, 1],
   CI_97.5  = exp(confint(final_model))[, 2],
+  P_Value   = model_summary[, 4],
   row.names = NULL
 ) %>%
-  mutate(across(where(is.numeric), ~ round(.x, 3)))
+  mutate(
+    # Format the P-value clinically (values below 0.05 become "< 0.05", otherwise show the number)
+    P_Value_Str = case_when(
+      P_Value < 0.05 ~ "< 0.05",
+      TRUE ~ as.character(round(P_Value, 3))
+    )
+  ) %>%
+  # Round only the OR and CI columns to 3 decimal places
+  mutate(across(c(OR, CI_2.5, CI_97.5), ~ round(.x, 3))) %>%
+  # Reorganise the columns and drop the raw numeric P_Value (keeping only the formatted one)
+  select(Variable, OR, CI_2.5, CI_97.5, P_Value = P_Value_Str)
 
 # Human-readable variable labels
 table_OR <- table_OR %>%
@@ -373,13 +384,13 @@ table_OR <- table_OR %>%
 
 kable(
   table_OR,
-  col.names = c("Variable", "Odds Ratio", "95% CI (Lower)", "95% CI (Upper)"),
+  col.names = c("Variable", "Odds Ratio", "95% CI (Lower)", "95% CI (Upper)", "p-value"),
   align     = "lccc",
   caption   = "Table 2. Adjusted Odds Ratios for heart failure from survey-weighted quasi-binomial logistic regression. Reference categories in parentheses. NHANES 2011–2018."
 ) %>%
   kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE) %>%
   footnote(
-    general       = "OR = Odds Ratio; CI = Confidence Interval. Education reference: < 9th grade.",
+    general       = "OR = Odds Ratio; CI = Confidence Interval. Education reference: < 9th grade. p-values < 0.05 indicate statistical significance.",
     general_title = "Note: "
   )
 ```
@@ -397,7 +408,7 @@ plot_data <- table_OR %>%
 
 ggplot(plot_data, aes(x = OR, y = Variable, colour = Significant)) +
   geom_vline(xintercept = 1, linetype = "dashed", colour = "grey50", linewidth = 0.5) +
-  geom_errorbarh(aes(xmin = CI_2.5, xmax = CI_97.5), height = 0.25, linewidth = 0.6) +
+  geom_errorbar(aes(xmin = CI_2.5, xmax = CI_97.5), height = 0.25, linewidth = 0.6) +
   geom_point(size = 2.8) +
   scale_x_log10() +
   scale_colour_manual(values = c("Yes" = "#2166AC", "No" = "#888888"),
@@ -553,8 +564,8 @@ The following limitations should be disclosed in the final presentation and any 
 # Create a list of all variables for potential use in the Shiny dashboard
 bundle <- list(
   final_model       = final_model,
-  ref_sodium_mg = analysis_data$Sodium_mg,
-  ref_protein_g = analysis_data$Protein_g,
+  ref_sodium_mg = Sodium_mg,
+  ref_protein_g = Protein_g,
   tab1_html = as.character(tab1_kable)
 )
 
