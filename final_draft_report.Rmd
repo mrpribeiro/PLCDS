@@ -408,7 +408,7 @@ plot_data <- table_OR %>%
 
 ggplot(plot_data, aes(x = OR, y = Variable, colour = Significant)) +
   geom_vline(xintercept = 1, linetype = "dashed", colour = "grey50", linewidth = 0.5) +
-  geom_errorbarh(aes(xmin = CI_2.5, xmax = CI_97.5), height = 0.25, linewidth = 0.6) +
+  geom_errorbar(aes(xmin = CI_2.5, xmax = CI_97.5), height = 0.25, linewidth = 0.6) +
   geom_point(size = 2.8) +
   scale_x_log10() +
   scale_colour_manual(values = c("Yes" = "#2166AC", "No" = "#888888"),
@@ -559,35 +559,13 @@ The following limitations should be disclosed in the final presentation and any 
 
 # 8. Exported Data for Dashboard
 
-```{r}
-# -----------------------------------------------------------------------------
-# POPULATION ADJUSTMENT
-# -----------------------------------------------------------------------------
-set.seed(123) # Ensure reproducibility
-
-# Create a representative sample of 10,000 points based on NHANES survey weights
-pop_sodium_usa <- sample(
-  x = analysis_data$Sodium_mg[!is.na(analysis_data$Sodium_mg)], 
-  size = 10000, 
-  replace = TRUE, 
-  prob = analysis_data$Weight_MEC8[!is.na(analysis_data$Sodium_mg)]
-)
-
-pop_protein_usa <- sample(
-  x = analysis_data$Protein_g[!is.na(analysis_data$Protein_g)], 
-  size = 10000, 
-  replace = TRUE, 
-  prob = analysis_data$Weight_MEC8[!is.na(analysis_data$Protein_g)]
-)
-```
-
 ```{r shinyapp, eval=FALSE}
 # eval=FALSE to prevent overwriting the bundle on every knit. Run this chunk once interactively after confirming all variables are correct.
 # Create a list of all variables for potential use in the Shiny dashboard
 bundle <- list(
   final_model       = final_model,
-  ref_sodium_mg = pop_sodium_usa,
-  ref_protein_g = pop_protein_usa,
+  ref_sodium_mg = Sodium_mg,
+  ref_protein_g = Protein_g,
   tab1_html = as.character(tab1_kable)
 )
 
