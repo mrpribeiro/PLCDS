@@ -102,11 +102,18 @@ server <- function(input, output, session) {
         
         # Percentiles
         pct_sodium <- reactive({
-                ecdf(bundle$ref_sodium_mg)(input$sodium_mg) * 100
+                # Add up the weights of all Americans who consume less or the same amount of sodium as the user
+                weights_below <- sum(bundle$ref_weights[bundle$ref_sodium_mg <= input$sodium_mg], na.rm = TRUE)
+                # Add up the weight of the entire US population
+                total_weight <- sum(bundle$ref_weights, na.rm = TRUE)
+                # Calculate the actual percentage
+                (weights_below / total_weight) * 100
         })
         
         pct_prot <- reactive({
-                ecdf(bundle$ref_protein_g)(input$protein_g) * 100
+                weights_below <- sum(bundle$ref_weights[bundle$ref_protein_g <= input$protein_g], na.rm = TRUE)
+                total_weight <- sum(bundle$ref_weights, na.rm = TRUE)
+                (weights_below / total_weight) * 100
         })
         
         output$pct_sodium_txt <- renderText({

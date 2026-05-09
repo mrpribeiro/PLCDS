@@ -566,6 +566,7 @@ bundle <- list(
   final_model       = final_model,
   ref_sodium_mg = Sodium_mg,
   ref_protein_g = Protein_g,
+  ref_weights   = analysis_data$Weight_MEC8,
   tab1_html = as.character(tab1_kable)
 )
 
