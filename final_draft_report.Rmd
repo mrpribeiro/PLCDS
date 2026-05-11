@@ -378,7 +378,7 @@ table_OR <- table_OR %>%
     Variable == "DiabetesPre-diabetes"         ~ "Comorbidity: Pre-diabetes (Ref: No)",
     Variable == "DiabetesYes"                  ~ "Comorbidity: Diabetes (Ref: No)",
     Variable == "Mean_Systolic"                      ~ "Mean systolic blood pressure (mmHg)",
-    Variable == "Medication_UseYes"                  ~ "Antihypertensive / diuretic use (Yes)",
+    Variable == "Medication_UseNo"                   ~ "No medication use (Ref: Yes)",
     TRUE ~ Variable
   ))
 
@@ -398,6 +398,7 @@ kable(
 ## 5.1 Forest Plot — Visualisation of Adjusted Odds Ratios
 
 ```{r forest_plot, fig.width=8, fig.height=7, fig.cap="Figure 1. Adjusted Odds Ratios with 95% confidence intervals for all predictors of heart failure. Estimates from survey-weighted quasi-binomial logistic regression (NHANES 2011–2018). Dashed vertical line at OR = 1.0 (null hypothesis). X-axis on log scale."}
+
 # Exclude intercept from plot
 plot_data <- table_OR %>%
   filter(Variable != "Intercept") %>%
@@ -405,6 +406,13 @@ plot_data <- table_OR %>%
     Variable    = reorder(Variable, OR),
     Significant = ifelse(CI_2.5 > 1 | CI_97.5 < 1, "Yes", "No")
   )
+
+vars_principais <- c(
+  "Sodium (mg)", 
+  "Protein (g)"
+)
+
+faces_eixo_y <- ifelse(levels(plot_data$Variable) %in% vars_principais, "bold", "plain")
 
 ggplot(plot_data, aes(x = OR, y = Variable, colour = Significant)) +
   geom_vline(xintercept = 1, linetype = "dashed", colour = "grey50", linewidth = 0.5) +
@@ -422,7 +430,7 @@ ggplot(plot_data, aes(x = OR, y = Variable, colour = Significant)) +
   theme(
     panel.grid.major.y = element_blank(),
     panel.grid.minor   = element_blank(),
-    axis.text.y        = element_text(size = 9)
+    axis.text.y        = element_text(size = 9, face = faces_eixo_y)
   )
 ```
 
