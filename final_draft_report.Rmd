@@ -432,6 +432,8 @@ ggplot(plot_data, aes(x = OR, y = Variable, colour = Significant)) +
     panel.grid.minor   = element_blank(),
     axis.text.y        = element_text(size = 9, face = faces_eixo_y)
   )
+
+# ggsave("forest_plot.png", width = 8, height = 7, dpi = 300)
 ```
 
 # 6. Model Diagnostics
@@ -451,11 +453,20 @@ roc_obj <- roc(
 auc_val <- round(as.numeric(auc(roc_obj)), 3)
 cat(sprintf("AUC (unweighted approximation): %.3f\n", auc_val))
 
-plot(roc_obj,
-     col  = "#2166AC",
-     lwd  = 2,
-     main = sprintf("ROC Curve — AUC = %.3f", auc_val),
-     print.auc = FALSE)
+
+roc_plot <- ggroc(roc_obj, colour = "#2166AC", linewidth = 1.2) +
+  geom_abline(intercept = 1, slope = 1, linetype = "dashed", colour = "grey50") +
+  labs(
+    title = sprintf("ROC Curve — AUC = %.3f", auc_val),
+    x = "Specificity",
+    y = "Sensitivity"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5))
+
+print(roc_plot)
+
+# ggsave("roc_curve.png", plot = roc_plot, width = 6, height = 5, dpi = 300)
 ```
 
 ## 6.2 Multicollinearity — Variance Inflation Factors (VIF)
